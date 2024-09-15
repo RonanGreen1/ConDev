@@ -26,19 +26,6 @@ func main() {
 		"XC": 90,
 		"CD": 400,
 		"CM": 900,
-		"i":  1,
-		"v":  5,
-		"x":  10,
-		"l":  50,
-		"c":  100,
-		"d":  500,
-		"m":  1000,
-		"iv": 4,
-		"ix": 9,
-		"xl": 40,
-		"xc": 90,
-		"cd": 400,
-		"cm": 900,
 	}
 
 	fmt.Println("Enter Roman Numerials")
@@ -51,7 +38,7 @@ func main() {
 
 	// Define allowed characters (Roman numerals: I, V, X, L, C, D, M),
 	// Return only boolean 'matched' then check if parameters were met
-	validInputPattern := "^[IVXLCDMivxlcdm]+$"
+	validInputPattern := "^[IVXLCDM]+$"
 	matched, _ := regexp.MatchString(validInputPattern, romanNumeral)
 
 	if !matched {
@@ -70,6 +57,7 @@ func main() {
 func calculation(romanNumeral string, convertion map[string]int) (int, error) {
 	var total int //number of roman numerals entered
 	length := len(romanNumeral)
+	var count int = 1
 
 	//initial check of 2 characters to see if they match any entries in the map
 	for i := 0; i < length; i++ {
@@ -87,11 +75,27 @@ func calculation(romanNumeral string, convertion map[string]int) (int, error) {
 
 		char := string(romanNumeral[i])
 		// Add single characters with a check to make sure the character isn't higher than the next.
+		//This also checks for combinations like VV or DD or a letter shwoing up more than 4 times like IIII
 		if value, exists := convertion[char]; exists {
 			if i+1 < length && convertion[char] < convertion[string(romanNumeral[i+1])] {
 				return -1, errors.New("invalid Roman numeral combination")
+			}else if i+1 < length && char == "V" && string(romanNumeral[i + 1]) == "V"{
+				return -1, errors.New("invalid Roman numeral combination")
+			}else if i+1 < length && char == "L" && string(romanNumeral[i + 1]) == "L"{
+				return -1, errors.New("invalid Roman numeral combination")
+			}else if i+1 < length && char == "D" && string(romanNumeral[i+ 1]) == "D"{
+				return -1, errors.New("invalid Roman numeral combination")
+			}else if i+1 < length && char == string(romanNumeral[i + 1]){
+				count += 1
+				if count > 3{
+					return -1, errors.New("invalid Roman numeral combination")
+				}
+			}else if i+1 < length && char != string(romanNumeral[i + 1]){
+				count = 1
 			}
+			
 			total += value
+			
 		}
 	}
 	return total, nil

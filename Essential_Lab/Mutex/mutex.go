@@ -9,10 +9,11 @@ var wg sync.WaitGroup
 var total int64
 
 func adds(n int, theLock *sync.Mutex) bool {
+	theLock.Lock()
+	defer theLock.Unlock()
 	for i:=0; i< n; i++ {
-		theLock.Lock()
 		total++
-		theLock.Unlock()
+		//theLock.Unlock()
 	}
 	wg.Done() //let waitgroup know we have finished
 	return true

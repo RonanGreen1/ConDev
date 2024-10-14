@@ -11,34 +11,33 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
-
-	"golang.org/x/sync/semaphore"
 )
 
 // Place a barrier in this function --use Mutex's and Semaphores
-func doStuff(goNum int, wg *sync.WaitGroup, arrived *int, max int, thelock *sync.Mutex, sem *semaphore.Weighted, ctx context.Context) bool {
+func doStuff(goNum int, arrived *int, max int, wg *sync.WaitGroup, sharedLock *sync.Mutex, theChan chan bool) bool {
+
 	time.Sleep(time.Second)
 	fmt.Println("Part A", goNum)
-	thelock.Lock()
+	//we wait here until everyone has completed part A
+	sharedLock.Lock()
 	*arrived++
-	if *arrived == max {
-		//we wait here until everyone has completed part A
-		sem.Release(1)
-		thelock.Unlock()
-		sem.Acquire(ctx, 1)
-	} else {
-		thelock.Unlock()
-		sem.Acquire(ctx, 1)
-		sem.Release(1)
-	}
+	if *arrived == 10 { //last to arrive -signal others to go
+		sharedLock.Unlock() //unlock before any potentially blocking code
+		theChan <- true
+		<-theChan
+	} else { //not all here yet we wait until signal
+		sharedLock.Unlock() //unlock before any potentially blocking code
+		<-theChan
+		theChan <- true //once we get through send signal to next routine to continue
+	} //end of if-else
 	fmt.Println("PartB", goNum)
+
 	wg.Done()
 	return true
-}
+} //end-doStuff
 
 func main() {
 	totalRoutines := 10
@@ -46,14 +45,11 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(totalRoutines)
 	//we will need some of these
-	ctx := context.TODO()
 	var theLock sync.Mutex
-	sem := semaphore.NewWeighted(0)
-	//sem.Acquire(ctx, 1)
+	theChan := make(chan bool)     //use unbuffered channel in place of semaphore
 	for i := range totalRoutines { //create the go Routines here
-		go doStuff(i, &wg, &arrived, totalRoutines, &theLock, sem, ctx)
+		go doStuff(i, &arrived, totalRoutines, &wg, &theLock, theChan)
 	}
-	//sem.Release(1)
-
 	wg.Wait() //wait for everyone to finish before exiting
-}
+} //end-main
+

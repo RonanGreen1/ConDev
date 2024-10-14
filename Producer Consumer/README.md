@@ -1,7 +1,7 @@
-# Lab 4 Barrier2
+# Lab 5 Producer Consumer
 
 ## License
-Lab 4 Barrier2 © 2024 by Ronan Green is licensed under CC BY-NC 4.0. To view a copy of this license, visit [https://creativecommons.org/licenses/by-nc/4.0/](https://creativecommons.org/licenses/by-nc/4.0/).
+lab 5 producer Consumer © 2024 by Ronan Green is licensed under CC BY-NC 4.0. To view a copy of this license, visit [https://creativecommons.org/licenses/by-nc/4.0/](https://creativecommons.org/licenses/by-nc/4.0/).
 
 ## Authors
 - Ronan Green
@@ -21,6 +21,3 @@ Lab 4 Barrier2 © 2024 by Ronan Green is licensed under CC BY-NC 4.0. To view a 
 - Currently, no external libraries are used.
 
 ## To Do
-- Fix existing errors.
-- Implement missing features.
-- Add comprehensive unit tests.

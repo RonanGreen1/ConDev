@@ -38,6 +38,8 @@ func doStuff(goNum int, arrived *int, max int, wg *sync.WaitGroup, sharedLock *s
 			theChan <- true //once we get through send signal to next routine to continue
 		} //end of if-else
 
+		fmt.Println("Part B", goNum)
+		
 		// everything is waiting here until the threads are finished
 		sharedLock.Lock()
 		*arrived--
@@ -50,7 +52,7 @@ func doStuff(goNum int, arrived *int, max int, wg *sync.WaitGroup, sharedLock *s
 			<-theChan
 			theChan <- true // This is sending a signal to the next routine
 		}
-		fmt.Println("PartB", goNum)
+		
 	}
 	wg.Done()
 	return true

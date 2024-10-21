@@ -1,2 +1,26 @@
-To run this code make sure to have go downloaded then just clone the repo and open the folder in the ternimal.
-Then run go run main.go when you have cd into the folder.
+# Lab 3 Barrier
+
+## License
+Lab 3 Barrier © 2024 by Ronan Green is licensed under CC BY-NC 4.0. To view a copy of this license, visit [https://creativecommons.org/licenses/by-nc/4.0/](https://creativecommons.org/licenses/by-nc/4.0/).
+
+## Authors
+- Ronan Green
+
+## How to Install
+1. Clone the repository:
+   ```sh
+   git clone <https://github.com/RonanGreen1/ConDev/tree/main/Barrier>
+   ```
+2. Use a Golang IDE to open the project (e.g., GoLand or VS Code).
+3. Run the main file:
+   ```sh
+   go run main.go
+   ```
+
+## List of Libraries
+- Currently, no external libraries are used.
+
+## To Do
+- Fix existing errors.
+- Implement missing features.
+- Add comprehensive unit tests.

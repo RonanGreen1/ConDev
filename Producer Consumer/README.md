@@ -9,7 +9,7 @@ lab 5 producer Consumer © 2024 by Ronan Green is licensed under CC BY-NC 4.0. T
 ## How to Install
 1. Clone the repository:
    ```sh
-   git clone <repository-url>
+   git clone <https://github.com/RonanGreen1/ConDev/tree/main/Producer%20Consumer>
    ```
 2. Use a Golang IDE to open the project (e.g., GoLand or VS Code).
 3. Run the main file:

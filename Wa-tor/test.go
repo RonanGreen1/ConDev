@@ -81,14 +81,14 @@ func (f *Fish) SetPosition(x, y int) {
 // Update function, called every frame to update the game state
 // Currently, no dynamic updates are happening in this simple version
 func (g *Game) Update() error {
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	moved := false
 	for i := range g.shark {
 		shark := &g.shark[i]
 		x, y := shark.GetPosition()
 
-		if shark.starve == 5 {
+		if shark.starve == 2 {
 			g.grid[x][y] = nil
 			g.shark = append(g.shark[:i], g.shark[i+1:]...)
 			continue
@@ -144,6 +144,7 @@ func (g *Game) Update() error {
 						g.grid[x][y] = newShark
 						g.shark = append(g.shark, *newShark)
 					}
+					shark.starve = 0
 					moved = true
 					break
 				}
@@ -173,25 +174,29 @@ func (g *Game) Update() error {
 						newX = x - 1
 					}
 				}
-	
-				// Check if the new position is empty
-				if g.grid[newX][newY] == nil {
-					// Move the shark to the new position
-					g.grid[x][y] = nil          // Clear old position
-					shark.SetPosition(newX, newY)
-					g.grid[newX][newY] = shark // Set new position
-					shark.breedTimer++ 		// Increment breed timer
-					if shark.breedTimer == 10 {
-						shark.breedTimer = 0
-						shark := Shark{x: x, y: y, breedTimer: 0}
-						g.grid[x][y] = &shark
-						g.shark = append(g.shark, shark)
+				
+
+				// Ensure the new position is within bounds
+				if newX >= 0 && newX < xdim && newY >= 0 && newY < ydim {
+					// Check if the new position is empty
+					if g.grid[newX][newY] == nil {
+						// Move the shark to the new position
+						g.grid[x][y] = nil          // Clear old position
+						shark.SetPosition(newX, newY)
+						g.grid[newX][newY] = shark // Set new position
+						shark.breedTimer++ 		// Increment breed timer
+						if shark.breedTimer == 10 {
+							shark.breedTimer = 0
+							shark := Shark{x: x, y: y, breedTimer: 0}
+							g.grid[x][y] = &shark
+							g.shark = append(g.shark, shark)
+						}
+						moved = true
+						break
 					}
-					shark.starve++
-					moved = true
-					break
 				}
 			}
+			shark.starve++
 		}
 	}
 
@@ -224,29 +229,29 @@ func (g *Game) Update() error {
 					}
 				}
 	
+			// Ensure the new position is within bounds
+			if newX >= 0 && newX < xdim && newY >= 0 && newY < ydim {
 				// Check if the new position is empty
 				if g.grid[newX][newY] == nil {
 					// Move the fish to the new position
 					g.grid[x][y] = nil          // Clear old position
 					fish.SetPosition(newX, newY)
 					g.grid[newX][newY] = fish // Set new position
-					fish.breedTimer++ 		// Increment breed timer
+					fish.breedTimer++         // Increment breed timer
 					if fish.breedTimer == 5 {
 						fish.breedTimer = 0
-						fish := Fish{x: x, y: y, breedTimer: 0}
-						g.grid[x][y] = &fish
-						g.fish = append(g.fish, fish)
+						newFish := &Fish{x: x, y: y, breedTimer: 0}
+						g.grid[x][y] = newFish
+						g.fish = append(g.fish, *newFish)
 					}
 					break
+				}
 			}
 		}
-
-		}
-
-
-			
-		return nil
 	}
+
+	return nil
+}
 
 
 // Draw function, called every frame to render the game screen

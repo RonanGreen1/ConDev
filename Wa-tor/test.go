@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"log"
 	"math/rand"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -24,32 +25,88 @@ const (
 // It contains a grid where each cell can have a color representing its state
 // (e.g., empty, fish, or shark).
 type Game struct {
-	grid [xdim][ydim]color.Color
+	grid [xdim][ydim]Entity
+	fish []Fish
+}
+
+// Entity interface for all game entities (Fish)
+type Entity interface {
+	GetType() string
+	GetPosition() (int, int)
+	SetPosition(x, y int)
 }
 
 // Shark struct representing a shark entity
 // Contains information such as position, energy level, and breed timer
-type Shark struct {
-	x, y     int // Position of the shark on the grid
-	starve   int // Starve level of the shark
-	breedTimer int // Timer for when the shark can reproduce
-}
+//type Shark struct {
+//	x, y     int // Position of the shark on the grid
+//	starve   int // Starve level of the shark
+//	breedTimer int // Timer for when the shark can reproduce
+//}
 
 // Fish struct representing a fish entity
 // Contains information such as position and breed timer
 type Fish struct {
 	x, y       int // Position of the fish on the grid
-	breedTimer int // Timer for when the fish can reproduce
+//	breedTimer int // Timer for when the fish can reproduce
+}
+
+func (f *Fish) GetType() string {
+	return "fish"
+}
+
+func (f *Fish) GetPosition() (int, int) {
+	return f.x, f.y
+}
+
+func (f *Fish) SetPosition(x, y int) {
+	f.x = x
+	f.y = y
 }
 
 // Update function, called every frame to update the game state
 // Currently, no dynamic updates are happening in this simple version
 func (g *Game) Update() error {
+		// Example: Move each fish randomly
+		for i := range g.fish {
+			fish := &g.fish[i]
+			x, y := fish.GetPosition()
 	
+			// Random movement direction: 0 = north, 1 = south, 2 = east, 3 = west
+			direction := rand.Intn(4)
+	
+			newX, newY := x, y
+			switch direction {
+			case 0: // North
+				if y > 0 {
+					newY = y - 1
+				}
+			case 1: // South
+				if y < ydim-1 {
+					newY = y + 1
+				}
+			case 2: // East
+				if x < xdim-1 {
+					newX = x + 1
+				}
+			case 3: // West
+				if x > 0 {
+					newX = x - 1
+				}
+			}
+	
+			// Check if the new position is empty
+			if g.grid[newX][newY] == nil {
+				// Move the fish to the new position
+				g.grid[x][y] = nil          // Clear old position
+				fish.SetPosition(newX, newY)
+				g.grid[newX][newY] = fish // Set new position
+			}
+		}
+	
+		return nil
+	}
 
-
-	return nil 
-}
 
 // Draw function, called every frame to render the game screen
 // It fills the screen with black and then draws each cell with its assigned color
@@ -62,7 +119,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			// Calculate the position of the current cell in pixels
 			x := i * cellXSize
 			y := k * cellYSize
-			rectColor := g.grid[i][k] // Get the color of the current cell
+
+			// Determine the color based on the entity in the cell
+			var rectColor color.Color
+			if entity := g.grid[i][k]; entity != nil {
+				switch entity.GetType() {
+				case "fish":
+					rectColor = color.RGBA{0, 255, 0, 255} // Green for fish
+				}
+			} else {
+				rectColor = color.RGBA{0, 0, 255, 255} // Blue for empty
+			}
 
 			// Draw the cell as a rectangle with the specified color
 			ebitenutil.DrawRect(screen, float64(x), float64(y), float64(cellXSize), float64(cellYSize), rectColor)
@@ -79,19 +146,22 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 // NewGame function initializes a new game instance with a grid of cells
 // The grid is initialized with alternating colors (green and blue) to represent fish and empty spaces
 func NewGame() *Game {
+	rand.Seed(time.Now().UnixNano()) // Seed the random number generator
 	game := &Game{}
 
-	// Initialize grid
+	// Initialize grid with random fish or empty spaces
 	for i := 0; i < xdim; i++ {
 		for k := 0; k < ydim; k++ {
 			randomNum := rand.Intn(30) + 1 // Random number between 1 and 30
 
-			if randomNum >= 20 && randomNum <= 25 {
-				game.grid[i][k] = color.RGBA{0, 255, 0, 255} // Green for fish
-			} else if randomNum > 25 && randomNum <= 30 {
-				game.grid[i][k] = color.RGBA{255, 0, 0, 255} // Red for shark
+			if randomNum >= 25 && randomNum <= 25 {
+				// Create and place a fish
+				fish := Fish{x: i, y: k}
+				game.grid[i][k] = &fish
+				game.fish = append(game.fish, fish)
 			} else {
-				game.grid[i][k] = color.RGBA{0, 0, 255, 255} // Blue for empty
+				// Leave the cell empty
+				game.grid[i][k] = nil
 			}
 		}
 	}

@@ -48,7 +48,7 @@ type Entity interface {
 // Contains information such as position and breed timer
 type Fish struct {
 	x, y       int // Position of the fish on the grid
-//	breedTimer int // Timer for when the fish can reproduce
+	breedTimer int // Timer for when the fish can reproduce
 }
 
 func (f *Fish) GetType() string {
@@ -74,7 +74,7 @@ func (g *Game) Update() error {
 	
 			// Random movement direction: 0 = north, 1 = south, 2 = east, 3 = west
 			direction := rand.Intn(4)
-	
+
 			newX, newY := x, y
 			switch direction {
 			case 0: // North
@@ -101,8 +101,18 @@ func (g *Game) Update() error {
 				g.grid[x][y] = nil          // Clear old position
 				fish.SetPosition(newX, newY)
 				g.grid[newX][newY] = fish // Set new position
+				if fish.breedTimer == 5 {
+					fish.breedTimer = 0
+					fish := Fish{x: x, y: y, breedTimer: 0}
+					g.grid[x][y] = &fish
+					g.fish = append(g.fish, fish)
+
+				}
+				fish.breedTimer++          // Increment breed timer
 			}
 		}
+
+		time.Sleep(10 * time.Millisecond)
 	
 		return nil
 	}
@@ -156,7 +166,7 @@ func NewGame() *Game {
 
 			if randomNum >= 25 && randomNum <= 25 {
 				// Create and place a fish
-				fish := Fish{x: i, y: k}
+				fish := Fish{x: i, y: k, breedTimer: 0}
 				game.grid[i][k] = &fish
 				game.fish = append(game.fish, fish)
 			} else {

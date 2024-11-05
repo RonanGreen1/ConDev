@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"log"
 	"math/rand"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -40,7 +41,7 @@ type Entity interface {
 // Contains information such as position, energy level, and breed timer
 type Shark struct {
 	x, y     int // Position of the shark on the grid
-	//starve   int // Starve level of the shark
+	starve   int // Starve level of the shark
 	breedTimer int // Timer for when the shark can reproduce
 }
 
@@ -80,10 +81,18 @@ func (f *Fish) SetPosition(x, y int) {
 // Update function, called every frame to update the game state
 // Currently, no dynamic updates are happening in this simple version
 func (g *Game) Update() error {
+	time.Sleep(100 * time.Millisecond)
+
 	moved := false
 	for i := range g.shark {
 		shark := &g.shark[i]
 		x, y := shark.GetPosition()
+
+		if shark.starve == 5 {
+			g.grid[x][y] = nil
+			g.shark = append(g.shark[:i], g.shark[i+1:]...)
+			continue
+		}
 		
 		for i := 4; i > 0; i-- {
 			// Random movement direction: 0 = north, 1 = south, 2 = east, 3 = west
@@ -108,30 +117,38 @@ func (g *Game) Update() error {
 				}
 			}
 
-			// Check if the new position is empty
-			if g.grid[newX][newY].GetType() == "fish" {
-				// Move the shark to the new position
-				g.grid[x][y] = nil          // Clear old position
-				shark.SetPosition(newX, newY)
-				g.grid[newX][newY] = shark // Set new position
-				shark.breedTimer++ 		// Increment breed timer
-				for i := range g.fish {
-					if g.fish[i].x == newX && g.fish[i].y == newY {
-						g.fish = append(g.fish[:i], g.fish[i+1:]...)
-						break
+			// Ensure the new position is within bounds
+			if newX >= 0 && newX < xdim && newY >= 0 && newY < ydim {
+				// Check if the new position is empty or contains a fish
+				if g.grid[newX][newY] == nil || g.grid[newX][newY].GetType() == "fish" {
+					// Move the shark to the new position
+					g.grid[x][y] = nil          // Clear old position
+					shark.SetPosition(newX, newY)
+					g.grid[newX][newY] = shark // Set new position
+	
+					// Increment breed timer and handle fish removal if necessary
+					shark.breedTimer++
+					if g.grid[newX][newY] != nil && g.grid[newX][newY].GetType() == "fish" {
+						for i := range g.fish {
+							if g.fish[i].x == newX && g.fish[i].y == newY {
+								g.fish = append(g.fish[:i], g.fish[i+1:]...)
+								break
+							}
+						}
 					}
+	
+					// Breed a new shark if breed timer reaches threshold
+					if shark.breedTimer == 10 {
+						shark.breedTimer = 0
+						newShark := &Shark{x: x, y: y, breedTimer: 0}
+						g.grid[x][y] = newShark
+						g.shark = append(g.shark, *newShark)
+					}
+					moved = true
+					break
 				}
-				if shark.breedTimer == 10 {
-					shark.breedTimer = 0
-					shark := Shark{x: x, y: y, breedTimer: 0}
-					g.grid[x][y] = &shark
-					g.shark = append(g.shark, shark)
-				}
-				moved = true
-				break
 			}
 		}
-	
 
 		if !moved {
 			for i := 4; i > 0; i-- {
@@ -170,6 +187,7 @@ func (g *Game) Update() error {
 						g.grid[x][y] = &shark
 						g.shark = append(g.shark, shark)
 					}
+					shark.starve++
 					moved = true
 					break
 				}
@@ -224,6 +242,8 @@ func (g *Game) Update() error {
 		}
 
 		}
+
+
 			
 		return nil
 	}
@@ -276,14 +296,14 @@ func NewGame() *Game {
 		for k := 0; k < ydim; k++ {
 			randomNum := rand.Intn(30) + 1 // Random number between 1 and 30
 
-			if randomNum >= 20 && randomNum <= 25 {
+			if randomNum >= 25 && randomNum <= 25 {
 				// Create and place a fish
 				fish := Fish{x: i, y: k, breedTimer: 0}
 				game.grid[i][k] = &fish
 				game.fish = append(game.fish, fish)
-			} else if randomNum >= 26 && randomNum <= 30 {
-				// Create and place a fish
-				shark := Shark{x: i, y: k, breedTimer: 0}
+			} else if randomNum >= 26 && randomNum <= 26 {
+				// Create and place a shark
+				shark := Shark{x: i, y: k, breedTimer: 0, starve: 0}
 				game.grid[i][k] = &shark
 				game.shark = append(game.shark, shark)
 			} else {

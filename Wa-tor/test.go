@@ -83,21 +83,19 @@ func (f *Fish) SetPosition(x, y int) {
 func (g *Game) Update() error {
 	time.Sleep(300 * time.Millisecond)
 
+	removedSharks := []int{}
+    newSharks := []Shark{}
+
 	moved := false
 	for i := range g.shark {
 		shark := &g.shark[i]
 		x, y := shark.GetPosition()
-
-		if shark.starve == 2 {
-			g.grid[x][y] = nil
-			g.shark = append(g.shark[:i], g.shark[i+1:]...)
-			continue
-		}
 		
-		for i := 4; i > 0; i-- {
+		for j := 4; j > 0; j-- {
 			// Random movement direction: 0 = north, 1 = south, 2 = east, 3 = west
-			direction := i
+			direction := j
 			newX, newY := x, y
+
 			switch direction {
 			case 0: // North
 				if y > 0 {
@@ -116,11 +114,11 @@ func (g *Game) Update() error {
 					newX = x - 1
 				}
 			}
-
+			moved = false
 			// Ensure the new position is within bounds
 			if newX >= 0 && newX < xdim && newY >= 0 && newY < ydim {
 				// Check if the new position is empty or contains a fish
-				if g.grid[newX][newY] == nil || g.grid[newX][newY].GetType() == "fish" {
+				if  g.grid[newX][newY] != nil && g.grid[newX][newY].GetType() == "fish" {
 					// Move the shark to the new position
 					g.grid[x][y] = nil          // Clear old position
 					shark.SetPosition(newX, newY)
@@ -136,15 +134,14 @@ func (g *Game) Update() error {
 							}
 						}
 					}
-	
+					shark.starve = 0
 					// Breed a new shark if breed timer reaches threshold
 					if shark.breedTimer == 10 {
 						shark.breedTimer = 0
-						newShark := &Shark{x: x, y: y, breedTimer: 0}
+						newShark := &Shark{x: x, y: y, breedTimer: 0, starve: 0}
 						g.grid[x][y] = newShark
-						g.shark = append(g.shark, *newShark)
+						newSharks = append(newSharks, *newShark)
 					}
-					shark.starve = 0
 					moved = true
 					break
 				}
@@ -152,9 +149,10 @@ func (g *Game) Update() error {
 		}
 
 		if !moved {
-			for i := 4; i > 0; i-- {
+			for j := 4; j > 0; j-- {
 				// Random movement direction: 0 = north, 1 = south, 2 = east, 3 = west
 				direction := rand.Intn(4)
+
 				newX, newY := x, y
 				switch direction {
 				case 0: // North
@@ -184,21 +182,39 @@ func (g *Game) Update() error {
 						g.grid[x][y] = nil          // Clear old position
 						shark.SetPosition(newX, newY)
 						g.grid[newX][newY] = shark // Set new position
+						if shark.starve == 2 {
+							g.grid[newX][newY] = nil
+							removedSharks = append(removedSharks, i)
+							continue
+						}
+						shark.starve++;
 						shark.breedTimer++ 		// Increment breed timer
 						if shark.breedTimer == 10 {
 							shark.breedTimer = 0
-							shark := Shark{x: x, y: y, breedTimer: 0}
+							shark := Shark{x: x, y: y, breedTimer: 0, starve: 0}
 							g.grid[x][y] = &shark
 							g.shark = append(g.shark, shark)
 						}
-						moved = true
 						break
 					}
 				}
 			}
-			shark.starve++
 		}
+
+			    // Remove sharks that starved
+				for _, idx := range removedSharks {
+					g.grid[g.shark[idx].x][g.shark[idx].y] = nil
+					g.shark = append(g.shark[:idx], g.shark[idx+1:]...)
+				}
+			
+				// Add new sharks that were bred
+				for _, newShark := range newSharks {
+					g.grid[newShark.x][newShark.y] = &newShark
+					g.shark = append(g.shark, newShark)
+				}
 	}
+
+
 
 
 		for i := range g.fish {
@@ -301,7 +317,7 @@ func NewGame() *Game {
 		for k := 0; k < ydim; k++ {
 			randomNum := rand.Intn(30) + 1 // Random number between 1 and 30
 
-			if randomNum >= 25 && randomNum <= 25 {
+			if randomNum >= 35 && randomNum <= 35 {
 				// Create and place a fish
 				fish := Fish{x: i, y: k, breedTimer: 0}
 				game.grid[i][k] = &fish

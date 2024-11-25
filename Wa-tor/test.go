@@ -5,7 +5,7 @@ import (
 	"image/color"
 	"log"
 	"math/rand"
-	"time"
+	"sort"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -25,10 +25,12 @@ const (
 // It contains a grid where each cell can have a color representing its state
 // (e.g., empty, fish, or shark).
 type Game struct {
-	grid [xdim][ydim]Entity
-	fish []Fish
+	grid  [xdim][ydim]Entity
+	fish  []Fish
 	shark []Shark
+	frameCounter  int
 }
+
 
 // Entity interface for all game entities (Fish)
 type Entity interface {
@@ -40,8 +42,8 @@ type Entity interface {
 // Shark struct representing a shark entity
 // Contains information such as position, energy level, and breed timer
 type Shark struct {
-	x, y     int // Position of the shark on the grid
-	starve   int // Starve level of the shark
+	x, y       int // Position of the shark on the grid
+	starve     int // Starve level of the shark
 	breedTimer int // Timer for when the shark can reproduce
 }
 
@@ -81,176 +83,54 @@ func (f *Fish) SetPosition(x, y int) {
 // Update function, called every frame to update the game state
 // Currently, no dynamic updates are happening in this simple version
 func (g *Game) Update() error {
-	time.Sleep(300 * time.Millisecond)
+	g.frameCounter++
+    if g.frameCounter < 2 {
+        return nil
+    }
+    g.frameCounter = 0
 
-	removedSharks := []int{}
-    newSharks := []Shark{}
+	for i := range g.fish {
+		fish := &g.fish[i]
+		x, y := fish.GetPosition()
 
-	moved := false
-	for i := range g.shark {
-		shark := &g.shark[i]
-		x, y := shark.GetPosition()
-		
-		for j := 4; j > 0; j-- {
+		for i := 4; i > 0; i-- {
 			// Random movement direction: 0 = north, 1 = south, 2 = east, 3 = west
-			direction := j
-			newX, newY := x, y
+			direction := rand.Intn(i)
 
+			newX, newY := x, y
 			switch direction {
 			case 0: // North
 				if y > 0 {
 					newY = y - 1
+				} else {
+					newY = ydim - 1 // Wrap to bottom
 				}
 			case 1: // South
 				if y < ydim-1 {
 					newY = y + 1
+				} else {
+					newY = 0 // Wrap to top
 				}
 			case 2: // East
 				if x < xdim-1 {
 					newX = x + 1
+				} else {
+					newX = 0 // Wrap to left
 				}
 			case 3: // West
 				if x > 0 {
 					newX = x - 1
+				} else {
+					newX = xdim - 1 // Wrap to right
 				}
 			}
-			moved = false
-			// Ensure the new position is within bounds
-			if newX >= 0 && newX < xdim && newY >= 0 && newY < ydim {
-				// Check if the new position is empty or contains a fish
-				if  g.grid[newX][newY] != nil && g.grid[newX][newY].GetType() == "fish" {
-					// Move the shark to the new position
-					g.grid[x][y] = nil          // Clear old position
-					shark.SetPosition(newX, newY)
-					g.grid[newX][newY] = shark // Set new position
-	
-					// Increment breed timer and handle fish removal if necessary
-					shark.breedTimer++
-					if g.grid[newX][newY] != nil && g.grid[newX][newY].GetType() == "fish" {
-						for i := range g.fish {
-							if g.fish[i].x == newX && g.fish[i].y == newY {
-								g.fish = append(g.fish[:i], g.fish[i+1:]...)
-								break
-							}
-						}
-					}
-					shark.starve = 0
-					// Breed a new shark if breed timer reaches threshold
-					if shark.breedTimer == 10 {
-						shark.breedTimer = 0
-						newShark := &Shark{x: x, y: y, breedTimer: 0, starve: 0}
-						g.grid[x][y] = newShark
-						newSharks = append(newSharks, *newShark)
-					}
-					moved = true
-					break
-				}
-			}
-		}
 
-		if !moved {
-			for j := 4; j > 0; j-- {
-				// Random movement direction: 0 = north, 1 = south, 2 = east, 3 = west
-				direction := rand.Intn(4)
-
-				newX, newY := x, y
-				switch direction {
-				case 0: // North
-					if y > 0 {
-						newY = y - 1
-					}
-				case 1: // South
-					if y < ydim-1 {
-						newY = y + 1
-					}
-				case 2: // East
-					if x < xdim-1 {
-						newX = x + 1
-					}
-				case 3: // West
-					if x > 0 {
-						newX = x - 1
-					}
-				}
-				
-
-				// Ensure the new position is within bounds
-				if newX >= 0 && newX < xdim && newY >= 0 && newY < ydim {
-					// Check if the new position is empty
-					if g.grid[newX][newY] == nil {
-						// Move the shark to the new position
-						g.grid[x][y] = nil          // Clear old position
-						shark.SetPosition(newX, newY)
-						g.grid[newX][newY] = shark // Set new position
-						if shark.starve == 2 {
-							g.grid[newX][newY] = nil
-							removedSharks = append(removedSharks, i)
-							continue
-						}
-						shark.starve++;
-						shark.breedTimer++ 		// Increment breed timer
-						if shark.breedTimer == 10 {
-							shark.breedTimer = 0
-							shark := Shark{x: x, y: y, breedTimer: 0, starve: 0}
-							g.grid[x][y] = &shark
-							g.shark = append(g.shark, shark)
-						}
-						break
-					}
-				}
-			}
-		}
-
-			    // Remove sharks that starved
-				for _, idx := range removedSharks {
-					g.grid[g.shark[idx].x][g.shark[idx].y] = nil
-					g.shark = append(g.shark[:idx], g.shark[idx+1:]...)
-				}
-			
-				// Add new sharks that were bred
-				for _, newShark := range newSharks {
-					g.grid[newShark.x][newShark.y] = &newShark
-					g.shark = append(g.shark, newShark)
-				}
-	}
-
-
-
-
-		for i := range g.fish {
-			fish := &g.fish[i]
-			x, y := fish.GetPosition()
-			
-			for i := 4; i > 0; i-- {
-				// Random movement direction: 0 = north, 1 = south, 2 = east, 3 = west
-				direction := rand.Intn(4)
-
-				newX, newY := x, y
-				switch direction {
-				case 0: // North
-					if y > 0 {
-						newY = y - 1
-					}
-				case 1: // South
-					if y < ydim-1 {
-						newY = y + 1
-					}
-				case 2: // East
-					if x < xdim-1 {
-						newX = x + 1
-					}
-				case 3: // West
-					if x > 0 {
-						newX = x - 1
-					}
-				}
-	
 			// Ensure the new position is within bounds
 			if newX >= 0 && newX < xdim && newY >= 0 && newY < ydim {
 				// Check if the new position is empty
 				if g.grid[newX][newY] == nil {
 					// Move the fish to the new position
-					g.grid[x][y] = nil          // Clear old position
+					g.grid[x][y] = nil // Clear old position
 					fish.SetPosition(newX, newY)
 					g.grid[newX][newY] = fish // Set new position
 					fish.breedTimer++         // Increment breed timer
@@ -265,6 +145,159 @@ func (g *Game) Update() error {
 			}
 		}
 	}
+
+	removedShark := []int{}
+	newSharks := []Shark{}
+	removedFish := []int{}
+	sharkCount := len(g.shark) // Record initial number of sharks to avoid infinite loop during iteration
+
+	for i := 0; i < sharkCount; i++ {
+		moved := false
+		shark := &g.shark[i]
+		x, y := shark.GetPosition()
+
+		// Try to move to a position occupied by a fish first
+		for j := 0; j < 4; j++ {
+			// Random movement direction: 0 = north, 1 = south, 2 = east, 3 = west
+			direction := rand.Intn(4)
+
+			newX, newY := x, y
+			switch direction {
+				case 0: // North
+				if y > 0 {
+					newY = y - 1
+				} else {
+					newY = ydim - 1 // Wrap to bottom
+				}
+			case 1: // South
+				if y < ydim-1 {
+					newY = y + 1
+				} else {
+					newY = 0 // Wrap to top
+				}
+			case 2: // East
+				if x < xdim-1 {
+					newX = x + 1
+				} else {
+					newX = 0 // Wrap to left
+				}
+			case 3: // West
+				if x > 0 {
+					newX = x - 1
+				} else {
+					newX = xdim - 1 // Wrap to right
+				}
+			}
+
+			// Ensure the new position is within bounds
+			if newX >= 0 && newX < xdim && newY >= 0 && newY < ydim {
+				// Check if the new position is occupied by a fish
+				if g.grid[newX][newY] != nil && g.grid[newX][newY].GetType() == "fish" {
+					// Move the shark to the new position
+					g.grid[x][y] = nil // Clear old position
+					shark.SetPosition(newX, newY)
+					g.grid[newX][newY] = shark // Set new position
+					shark.starve = 0
+					shark.breedTimer++         // Increment breed timer
+					if shark.breedTimer == 5 {
+						shark.breedTimer = 0
+						newShark := Shark{x: x, y: y, breedTimer: 0, starve: 0}
+						g.grid[x][y] = &newShark
+						newSharks = append(newSharks, newShark)
+					}
+					// Mark the fish for removal
+					for j, fish := range g.fish {
+						if fish.x == newX && fish.y == newY {
+							removedFish = append(removedFish, j)
+							break
+						}
+					}
+					moved = true
+					break
+				}
+			}
+		}
+
+		// If shark didn't move to eat a fish, try to move to an empty cell
+		if !moved {
+			for j := 0; j < 4; j++ {
+				// Random movement direction: 0 = north, 1 = south, 2 = east, 3 = west
+				direction := rand.Intn(4)
+
+				newX, newY := x, y
+				switch direction {
+					case 0: // North
+					if y > 0 {
+						newY = y - 1
+					} else {
+						newY = ydim - 1 // Wrap to bottom
+					}
+				case 1: // South
+					if y < ydim-1 {
+						newY = y + 1
+					} else {
+						newY = 0 // Wrap to top
+					}
+				case 2: // East
+					if x < xdim-1 {
+						newX = x + 1
+					} else {
+						newX = 0 // Wrap to left
+					}
+				case 3: // West
+					if x > 0 {
+						newX = x - 1
+					} else {
+						newX = xdim - 1 // Wrap to right
+					}
+				}
+
+				// Ensure the new position is within bounds
+				if newX >= 0 && newX < xdim && newY >= 0 && newY < ydim {
+					// Check if the new position is empty
+					if g.grid[newX][newY] == nil {
+						// Move the shark to the new position
+						g.grid[x][y] = nil // Clear old position
+						shark.SetPosition(newX, newY)
+						g.grid[newX][newY] = shark // Set new position
+						shark.starve++
+						if shark.starve == 5 {
+							g.grid[newX][newY] = nil
+							removedShark = append(removedShark, i)
+						}
+						shark.breedTimer++         // Increment breed timer
+						if shark.breedTimer == 6 {
+							shark.breedTimer = 0
+							newShark := Shark{x: x, y: y, breedTimer: 0, starve: 0}
+							g.grid[x][y] = &newShark
+							newSharks = append(newSharks, newShark)
+						}
+						moved = true
+						break
+					}
+				}
+			}
+		}
+	}
+
+	// Remove fish that were eaten
+	sort.Sort(sort.Reverse(sort.IntSlice(removedFish))) // Sort in reverse order to remove elements from the end first, avoiding index shift issues
+	for _, index := range removedFish { // Iterate over the sorted indices and remove the fish
+		if index < len(g.fish) {
+			g.fish = append(g.fish[:index], g.fish[index+1:]...)
+		}
+	}
+
+	// Remove sharks that starved
+	sort.Sort(sort.Reverse(sort.IntSlice(removedShark))) // Sort in reverse order to remove elements from the end first, avoiding index shift issues
+	for _, index := range removedShark { // Iterate over the sorted indices and remove the sharks
+		if index < len(g.shark) {
+			g.shark = append(g.shark[:index], g.shark[index+1:]...)
+		}
+	}
+
+	// Add new sharks after iteration
+	g.shark = append(g.shark, newSharks...)
 
 	return nil
 }
@@ -287,12 +320,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			if entity := g.grid[i][k]; entity != nil {
 				switch entity.GetType() {
 				case "fish":
-					rectColor = color.RGBA{0, 255, 0, 255} // Green for fish
+					rectColor = color.RGBA{0, 221, 255, 1} // Green for fish
 				case "shark":
-					rectColor = color.RGBA{255, 0, 0, 255} // Red for shark
+					rectColor = color.RGBA{190, 44,190, 1} // Red for shark
 				}
 			} else {
-				rectColor = color.RGBA{0, 0, 255, 255} // Blue for empty
+				rectColor = color.RGBA{0, 0, 0, 0} // Blue for empty
 			}
 
 			// Draw the cell as a rectangle with the specified color
@@ -315,14 +348,13 @@ func NewGame() *Game {
 	// Initialize grid with random fish or empty spaces
 	for i := 0; i < xdim; i++ {
 		for k := 0; k < ydim; k++ {
-			randomNum := rand.Intn(30) + 1 // Random number between 1 and 30
-
-			if randomNum >= 35 && randomNum <= 35 {
+			randomNum := rand.Intn(100) + 1 // Random number between 1 and 30
+			if randomNum >= 5 && randomNum <= 10 {
 				// Create and place a fish
 				fish := Fish{x: i, y: k, breedTimer: 0}
 				game.grid[i][k] = &fish
 				game.fish = append(game.fish, fish)
-			} else if randomNum >= 26 && randomNum <= 26 {
+			} else if randomNum >= 86 && randomNum <= 86 {
 				// Create and place a shark
 				shark := Shark{x: i, y: k, breedTimer: 0, starve: 0}
 				game.grid[i][k] = &shark

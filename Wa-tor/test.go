@@ -2,10 +2,12 @@ package main
 
 import (
 	//"fmt"
+
 	"image/color"
 	"log"
 	"math/rand"
 	"sort"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -28,7 +30,8 @@ type Game struct {
 	grid  [xdim][ydim]Entity
 	fish  []Fish
 	shark []Shark
-	frameCounter  int
+	startTime time.Time
+	simComplete bool // Track if the simulation is complete
 }
 
 
@@ -83,12 +86,13 @@ func (f *Fish) SetPosition(x, y int) {
 // Update function, called every frame to update the game state
 // Currently, no dynamic updates are happening in this simple version
 func (g *Game) Update() error {
-	g.frameCounter++
-    if g.frameCounter < 2 {
+	ebiten.SetTPS(30)
+
+	if time.Since(g.startTime) > 10*time.Second {
+		g.simComplete = true
         return nil
     }
-    g.frameCounter = 0
-
+	
 	for i := range g.fish {
 		fish := &g.fish[i]
 		x, y := fish.GetPosition()
@@ -332,6 +336,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			ebitenutil.DrawRect(screen, float64(x), float64(y), float64(cellXSize), float64(cellYSize), rectColor)
 		}
 	}
+
+	if g.simComplete {
+
+        ebitenutil.DebugPrintAt(screen, "Sim Complete", windowXSize/2-50, windowYSize/2)
+    }
 }
 
 // Layout function, called to set the screen size
@@ -343,7 +352,9 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 // NewGame function initializes a new game instance with a grid of cells
 // The grid is initialized with alternating colors (green and blue) to represent fish and empty spaces
 func NewGame() *Game {
-	game := &Game{}
+	game := &Game{
+		startTime: time.Now(),
+	}
 
 	// Initialize grid with random fish or empty spaces
 	for i := 0; i < xdim; i++ {
@@ -377,6 +388,7 @@ func main() {
 	// Set the window size and title
 	ebiten.SetWindowSize(windowXSize, windowYSize)
 	ebiten.SetWindowTitle("Ebiten Wa-Tor World")
+	
 
 	// Run the game loop, which will call Update and Draw repeatedly
 	if err := ebiten.RunGame(game); err != nil {

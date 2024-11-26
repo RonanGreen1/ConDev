@@ -14,8 +14,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/shirou/gopsutil/v3/cpu"
-    "github.com/shirou/gopsutil/v3/mem"
 )
 
 // Constants for grid and window dimensions
@@ -28,6 +26,7 @@ const (
 	cellYSize   = windowYSize / ydim // Height of each cell in pixels
 )
 
+
 // Game struct representing the state of the game
 // It contains a grid where each cell can have a color representing its state
 // (e.g., empty, fish, or shark).
@@ -37,7 +36,7 @@ type Game struct {
 	shark []Shark
 	startTime time.Time
 	simComplete bool // Track if the simulation is complete
-	frameCount    int     // Number of frames processed
+	totalFrames  int
 }
 
 
@@ -89,14 +88,34 @@ func (f *Fish) SetPosition(x, y int) {
 	f.y = y
 }
 
+func (g *Game) StartSimulation() {
+    g.startTime = time.Now()
+    g.totalFrames = 0
+}
+
+func (g *Game) RecordFrame() {
+    g.totalFrames++
+}
+
+// Call this after the simulation ends to calculate the FPS
+func (g *Game) CalculateAverageFPS() float64 {
+    elapsedTime := time.Since(g.startTime).Seconds()
+    if elapsedTime > 0 {
+        return float64(g.totalFrames) / elapsedTime
+    }
+    return 0.0
+}
+
 // Update function, called every frame to update the game state
 // Currently, no dynamic updates are happening in this simple version
 func (g *Game) Update() error {
-	ebiten.SetTPS(30)
+
+	g.RecordFrame()
 
 	if time.Since(g.startTime) > 10*time.Second {
-		g.simComplete = true
-		writeSimulationDataToCSV("simulation_results.csv", g)
+        g.simComplete = true
+        avgFPS := g.CalculateAverageFPS()
+        writeSimulationDataToCSV("simulation_results.csv", g, 1, avgFPS)
         return nil
     }
 	
@@ -403,55 +422,39 @@ func main() {
 	}
 }
 
-func writeSimulationDataToCSV(filename string, g *Game) {
-	// Open the CSV file in append mode (create if it doesn't exist, write-only mode)
+func writeSimulationDataToCSV(filename string, g *Game, threadCount int, frameRate float64) {
+    // Open the CSV file in append mode (create if it doesn't exist, write-only mode)
     file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
     if err != nil {
-		// Log an error if the file cannot be opened
+        // Log an error if the file cannot be opened
         log.Fatalf("failed to open file: %v", err)
     }
     defer file.Close() // Ensure the file is closed when the function ends
 
-    writer := csv.NewWriter(file) // Create a CSV writer to write data into the file
+    // Create a CSV writer to write data into the file
+    writer := csv.NewWriter(file)
     defer writer.Flush() // Ensure all buffered data is written to the file before the function ends
 
-    // Write headers if the file is empty
+    // Get the file's stats to check if the file is empty
     stat, err := file.Stat()
     if err != nil {
-		 // Log an error if the file stats cannot be retrieved
+        // Log an error if the file stats cannot be retrieved
         log.Fatalf("failed to get file stats: %v", err)
     }
-	 // If the file is empty, write the header row to the CSV file
+    // If the file is empty, write the header row to the CSV file
     if stat.Size() == 0 {
-        writer.Write([]string{"Grid Size", "Initial Sharks", "Initial Fish", "Elapsed Time (s)", "Frame Count", "CPU Usage (%)", "RAM Usage (%)"})
+        writer.Write([]string{"Grid Size", "Thread Count", "Frame Rate"})
     }
 
-	// Get CPU usage (as a percentage)
-	cpuPercent, err := cpu.Percent(0, false)
-	if err != nil {
-		log.Printf("failed to get CPU usage: %v", err)
-		cpuPercent = []float64{0.0} // Default to 0 if unable to get CPU usage
-	}
-	
-	// Get RAM usage (as a percentage)
-	vmStat, err := mem.VirtualMemory()
-	if err != nil {
-		log.Printf("failed to get RAM usage: %v", err)
-	}
-
-    // Write the data for the current simulation
+    // Prepare the data to write to the CSV file
     data := []string{
-        strconv.Itoa(len(g.grid)),               // Grid Size
-        strconv.Itoa(len(g.shark)),              // Initial Sharks
-        strconv.Itoa(len(g.fish)),               // Initial Fish
-		strconv.Itoa(10),
-        strconv.Itoa(g.frameCount),              // Frame Count
-		strconv.FormatFloat(cpuPercent[0], 'f', 2, 64),      // Convert the CPU usage to a string with 2 decimal places
-        strconv.FormatFloat(vmStat.UsedPercent, 'f', 2, 64), // Convert the RAM usage to a string with 2 decimal places
+        strconv.Itoa(len(g.grid)),             // Convert the grid size to a string
+        strconv.Itoa(threadCount),             // Convert the thread count to a string
+        strconv.FormatFloat(frameRate, 'f', 2, 64), // Convert the frame rate to a string with 2 decimal places
     }
-	// Write the prepared data to the CSV file
+    // Write the prepared data to the CSV file
     if err := writer.Write(data); err != nil {
-		// Log an error if the data cannot be written to the file
+        // Log an error if the data cannot be written to the file
         log.Fatalf("failed to write to csv: %v", err)
     }
 }

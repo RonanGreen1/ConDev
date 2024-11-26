@@ -8,15 +8,20 @@ import (
 	"math/rand"
 	"sort"
 	"time"
+	"encoding/csv"
+    "os"
+    "strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/shirou/gopsutil/v3/cpu"
+    "github.com/shirou/gopsutil/v3/mem"
 )
 
 // Constants for grid and window dimensions
 const (
-	xdim        = 100                // Number of cells in the x direction
-	ydim        = 100                // Number of cells in the y direction
+	xdim        = 50                // Number of cells in the x direction
+	ydim        = 50                // Number of cells in the y direction
 	windowXSize = 800                // Width of the window in pixels
 	windowYSize = 600                // Height of the window in pixels
 	cellXSize   = windowXSize / xdim // Width of each cell in pixels
@@ -32,6 +37,7 @@ type Game struct {
 	shark []Shark
 	startTime time.Time
 	simComplete bool // Track if the simulation is complete
+	frameCount    int     // Number of frames processed
 }
 
 
@@ -90,6 +96,7 @@ func (g *Game) Update() error {
 
 	if time.Since(g.startTime) > 10*time.Second {
 		g.simComplete = true
+		writeSimulationDataToCSV("simulation_results.csv", g)
         return nil
     }
 	
@@ -394,4 +401,57 @@ func main() {
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err) // Log any errors that occur
 	}
+}
+
+func writeSimulationDataToCSV(filename string, g *Game) {
+	// Open the CSV file in append mode (create if it doesn't exist, write-only mode)
+    file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+    if err != nil {
+		// Log an error if the file cannot be opened
+        log.Fatalf("failed to open file: %v", err)
+    }
+    defer file.Close() // Ensure the file is closed when the function ends
+
+    writer := csv.NewWriter(file) // Create a CSV writer to write data into the file
+    defer writer.Flush() // Ensure all buffered data is written to the file before the function ends
+
+    // Write headers if the file is empty
+    stat, err := file.Stat()
+    if err != nil {
+		 // Log an error if the file stats cannot be retrieved
+        log.Fatalf("failed to get file stats: %v", err)
+    }
+	 // If the file is empty, write the header row to the CSV file
+    if stat.Size() == 0 {
+        writer.Write([]string{"Grid Size", "Initial Sharks", "Initial Fish", "Elapsed Time (s)", "Frame Count", "CPU Usage (%)", "RAM Usage (%)"})
+    }
+
+	// Get CPU usage (as a percentage)
+	cpuPercent, err := cpu.Percent(0, false)
+	if err != nil {
+		log.Printf("failed to get CPU usage: %v", err)
+		cpuPercent = []float64{0.0} // Default to 0 if unable to get CPU usage
+	}
+	
+	// Get RAM usage (as a percentage)
+	vmStat, err := mem.VirtualMemory()
+	if err != nil {
+		log.Printf("failed to get RAM usage: %v", err)
+	}
+
+    // Write the data for the current simulation
+    data := []string{
+        strconv.Itoa(len(g.grid)),               // Grid Size
+        strconv.Itoa(len(g.shark)),              // Initial Sharks
+        strconv.Itoa(len(g.fish)),               // Initial Fish
+		strconv.Itoa(10),
+        strconv.Itoa(g.frameCount),              // Frame Count
+		strconv.FormatFloat(cpuPercent[0], 'f', 2, 64),      // Convert the CPU usage to a string with 2 decimal places
+        strconv.FormatFloat(vmStat.UsedPercent, 'f', 2, 64), // Convert the RAM usage to a string with 2 decimal places
+    }
+	// Write the prepared data to the CSV file
+    if err := writer.Write(data); err != nil {
+		// Log an error if the data cannot be written to the file
+        log.Fatalf("failed to write to csv: %v", err)
+    }
 }

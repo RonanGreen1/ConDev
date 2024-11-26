@@ -16,8 +16,8 @@ import (
 
 // Constants for grid and window dimensions
 const (
-    xdim        = 50                 // Number of cells in the x direction
-    ydim        = 50                // Number of cells in the y direction
+    xdim        = 400                 // Number of cells in the x direction
+    ydim        = 400                 // Number of cells in the y direction
     windowXSize = 800                // Width of the window in pixels
     windowYSize = 600                // Height of the window in pixels
     cellXSize   = windowXSize / xdim // Width of each cell in pixels
@@ -26,22 +26,24 @@ const (
 
 // Game struct representing the state of the game
 type Game struct {
-    grid            [xdim][ydim]Entity
-    fish            []*Fish
-    shark           []*Shark
-    startTime       time.Time
-    simComplete     bool
-    totalFrames     int
-    partitions      []Partition
-    boundaryMutexes map[int]*sync.Mutex
-    fishMutex       sync.Mutex
-    sharkMutex      sync.Mutex
-    gridMutex       [xdim][ydim]sync.Mutex
+    grid        [xdim][ydim]Entity
+    fish        []*Fish
+    shark       []*Shark
+    startTime   time.Time
+    simComplete bool
+    totalFrames int
+    partitions  []Partition
+    fishMutex   sync.Mutex
+    sharkMutex  sync.Mutex
+    gridMutex   [xdim][ydim]sync.Mutex
 }
 
+// Partition struct representing a section of the grid
 type Partition struct {
-    startX int
-    endX   int
+    startX             int
+    endX               int
+    leftBoundaryMutex  *sync.Mutex
+    rightBoundaryMutex *sync.Mutex
 }
 
 // Entity interface for all game entities (Fish and Shark)
@@ -210,171 +212,206 @@ func (g *Game) processRemovalsAndAdditions(
 }
 
 func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark) {
-    // Local slices for additions and removals
+    // Local slices for additions and removals of fish and sharks
     var localFishAdditions []*Fish
     var localFishRemovals []*Fish
     var localSharkAdditions []*Shark
     var localSharkRemovals []*Shark
 
-    // Create copies of g.fish and g.shark to avoid concurrent read issues
-    g.fishMutex.Lock()
-    fishCopy := make([]*Fish, len(g.fish))
-    copy(fishCopy, g.fish)
-    g.fishMutex.Unlock()
+    // Create a copy of g.fish to avoid concurrent read issues
+    g.fishMutex.Lock()                       // Lock the fish mutex
+    fishCopy := make([]*Fish, len(g.fish))   // Create a slice to hold the copy
+    copy(fishCopy, g.fish)                   // Copy the fish slice
+    g.fishMutex.Unlock()                     // Unlock the fish mutex
 
-    g.sharkMutex.Lock()
-    sharkCopy := make([]*Shark, len(g.shark))
-    copy(sharkCopy, g.shark)
-    g.sharkMutex.Unlock()
+    // Create a copy of g.shark to avoid concurrent read issues
+    g.sharkMutex.Lock()                      // Lock the shark mutex
+    sharkCopy := make([]*Shark, len(g.shark)) // Create a slice to hold the copy
+    copy(sharkCopy, g.shark)                 // Copy the shark slice
+    g.sharkMutex.Unlock()                    // Unlock the shark mutex
 
-    // Process fish
+    // Process each fish in the copied fish slice
     for _, fish := range fishCopy {
-        x, y := fish.GetPosition()
+        x, y := fish.GetPosition()           // Get the current position of the fish
+
+        // Check if the fish is within this partition
         if x < p.startX || x > p.endX {
-            continue // Skip fish not in this partition
+            continue                         // Skip fish not in this partition
         }
 
-        moved := false
-        for dir := 0; dir < 4; dir++ {
-            direction := rand.Intn(4)
+        moved := false                       // Flag to indicate if the fish has moved
 
-            newX, newY := x, y
+        // Try moving the fish in up to four directions
+        for dir := 0; dir < 4; dir++ {
+            direction := rand.Intn(4)        // Randomly select a direction (0-3)
+
+            newX, newY := x, y               // Initialize new position variables
+
+            // Determine the new position based on the direction
             switch direction {
             case 0: // North
                 if y > 0 {
                     newY = y - 1
                 } else {
-                    newY = ydim - 1 // Wrap to bottom
+                    newY = ydim - 1          // Wrap around to the bottom
                 }
             case 1: // South
                 if y < ydim-1 {
                     newY = y + 1
                 } else {
-                    newY = 0 // Wrap to top
+                    newY = 0                 // Wrap around to the top
                 }
             case 2: // East
                 if x < xdim-1 {
                     newX = x + 1
                 } else {
-                    newX = 0 // Wrap to left
+                    newX = 0                 // Wrap around to the left
                 }
             case 3: // West
                 if x > 0 {
                     newX = x - 1
                 } else {
-                    newX = xdim - 1 // Wrap to right
+                    newX = xdim - 1          // Wrap around to the right
                 }
             }
 
-            // Check if the new position crosses the partition boundary
-            isCrossingBoundary := (newX < p.startX) || (newX > p.endX)
+            // Variable to hold the boundary mutex if crossing a boundary
             var mu *sync.Mutex
-            if isCrossingBoundary {
-                mu = g.boundaryMutexes[newX]
-                mu.Lock()
+
+            // Check if the new position crosses a partition boundary
+            if newX < p.startX {
+                // Crosses the left boundary; use the left boundary mutex
+                mu = p.leftBoundaryMutex
+                mu.Lock()                    // Lock the left boundary mutex
+            } else if newX > p.endX {
+                // Crosses the right boundary; use the right boundary mutex
+                mu = p.rightBoundaryMutex
+                mu.Lock()                    // Lock the right boundary mutex
             }
 
-            // Lock the grid cells before modifying
-            g.gridMutex[x][y].Lock()
-            g.gridMutex[newX][newY].Lock()
+            // Lock the grid cells before modifying to prevent data races
+            g.gridMutex[x][y].Lock()         // Lock the current cell
+            g.gridMutex[newX][newY].Lock()   // Lock the new cell
 
-            // Check if the new position is empty
+            // Check if the new cell is empty
             if g.grid[newX][newY] == nil {
-                // Move the fish
-                g.grid[x][y] = nil
-                fish.SetPosition(newX, newY)
-                g.grid[newX][newY] = fish
+                // Move the fish to the new position
+                g.grid[x][y] = nil           // Clear the current cell
+                fish.SetPosition(newX, newY) // Update fish's position
+                g.grid[newX][newY] = fish    // Place fish in the new cell
+
+                // Increment the fish's breed timer
                 fish.breedTimer++
                 if fish.breedTimer == 5 {
+                    // Fish is ready to breed
                     fish.breedTimer = 0
+                    // Create a new fish at the old position
                     newFish := &Fish{x: x, y: y, breedTimer: 0}
-                    g.grid[x][y] = newFish
-                    localFishAdditions = append(localFishAdditions, newFish)
+                    g.grid[x][y] = newFish               // Place new fish in the old cell
+                    localFishAdditions = append(localFishAdditions, newFish) // Add to local additions
                 }
-                moved = true
+                moved = true                // Mark that the fish has moved
             }
 
-            g.gridMutex[newX][newY].Unlock()
-            g.gridMutex[x][y].Unlock()
+            // Unlock the grid cells after modification
+            g.gridMutex[newX][newY].Unlock() // Unlock the new cell
+            g.gridMutex[x][y].Unlock()       // Unlock the current cell
 
-            if isCrossingBoundary && mu != nil {
+            // If a boundary mutex was used, unlock it
+            if mu != nil {
                 mu.Unlock()
             }
 
             if moved {
-                break
+                break                        // Exit the direction loop if the fish has moved
             }
         }
     }
 
-    // Process sharks
+    // Process each shark in the copied shark slice
     for _, shark := range sharkCopy {
-        x, y := shark.GetPosition()
+        x, y := shark.GetPosition()          // Get the current position of the shark
+
+        // Check if the shark is within this partition
         if x < p.startX || x > p.endX {
-            continue // Skip sharks not in this partition
+            continue                         // Skip sharks not in this partition
         }
 
-        moved := false
+        moved := false                       // Flag to indicate if the shark has moved
 
         // Try to move to a position occupied by a fish first
         for dir := 0; dir < 4; dir++ {
-            direction := rand.Intn(4)
+            direction := rand.Intn(4)        // Randomly select a direction (0-3)
 
-            newX, newY := x, y
+            newX, newY := x, y               // Initialize new position variables
+
+            // Determine the new position based on the direction
             switch direction {
             case 0: // North
                 if y > 0 {
                     newY = y - 1
                 } else {
-                    newY = ydim - 1 // Wrap to bottom
+                    newY = ydim - 1          // Wrap around to the bottom
                 }
             case 1: // South
                 if y < ydim-1 {
                     newY = y + 1
                 } else {
-                    newY = 0 // Wrap to top
+                    newY = 0                 // Wrap around to the top
                 }
             case 2: // East
                 if x < xdim-1 {
                     newX = x + 1
                 } else {
-                    newX = 0 // Wrap to left
+                    newX = 0                 // Wrap around to the left
                 }
             case 3: // West
                 if x > 0 {
                     newX = x - 1
                 } else {
-                    newX = xdim - 1 // Wrap to right
+                    newX = xdim - 1          // Wrap around to the right
                 }
             }
 
-            // Check if the new position crosses the partition boundary
-            isCrossingBoundary := (newX < p.startX) || (newX > p.endX)
+            // Variable to hold the boundary mutex if crossing a boundary
             var mu *sync.Mutex
-            if isCrossingBoundary {
-                mu = g.boundaryMutexes[newX]
-                mu.Lock()
+
+            // Check if the new position crosses a partition boundary
+            if newX < p.startX {
+                // Crosses the left boundary; use the left boundary mutex
+                mu = p.leftBoundaryMutex
+                mu.Lock()                    // Lock the left boundary mutex
+            } else if newX > p.endX {
+                // Crosses the right boundary; use the right boundary mutex
+                mu = p.rightBoundaryMutex
+                mu.Lock()                    // Lock the right boundary mutex
             }
 
-            // Lock the grid cells before modifying
-            g.gridMutex[x][y].Lock()
-            g.gridMutex[newX][newY].Lock()
+            // Lock the grid cells before modifying to prevent data races
+            g.gridMutex[x][y].Lock()         // Lock the current cell
+            g.gridMutex[newX][newY].Lock()   // Lock the new cell
 
-            // Check if the new position is occupied by a fish
+            // Check if the new cell is occupied by a fish
             if g.grid[newX][newY] != nil && g.grid[newX][newY].GetType() == "fish" {
-                // Move the shark
-                g.grid[x][y] = nil
-                shark.SetPosition(newX, newY)
-                g.grid[newX][newY] = shark
-                shark.starve = 0
+                // Move the shark to the new position
+                g.grid[x][y] = nil           // Clear the current cell
+                shark.SetPosition(newX, newY)// Update shark's position
+                g.grid[newX][newY] = shark   // Place shark in the new cell
+
+                shark.starve = 0             // Reset the shark's starvation counter
+
+                // Increment the shark's breed timer
                 shark.breedTimer++
                 if shark.breedTimer == 5 {
+                    // Shark is ready to breed
                     shark.breedTimer = 0
+                    // Create a new shark at the old position
                     newShark := &Shark{x: x, y: y, breedTimer: 0, starve: 0}
-                    g.grid[x][y] = newShark
-                    localSharkAdditions = append(localSharkAdditions, newShark)
+                    g.grid[x][y] = newShark              // Place new shark in the old cell
+                    localSharkAdditions = append(localSharkAdditions, newShark) // Add to local additions
                 }
-                // Mark the fish for removal
+
+                // Mark the fish for removal from the fish slice
                 var fishToRemove *Fish
                 for _, fish := range fishCopy {
                     fx, fy := fish.GetPosition()
@@ -386,98 +423,115 @@ func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark) 
                 if fishToRemove != nil {
                     localFishRemovals = append(localFishRemovals, fishToRemove)
                 }
-                moved = true
+
+                moved = true                // Mark that the shark has moved
             }
 
-            g.gridMutex[newX][newY].Unlock()
-            g.gridMutex[x][y].Unlock()
+            // Unlock the grid cells after modification
+            g.gridMutex[newX][newY].Unlock() // Unlock the new cell
+            g.gridMutex[x][y].Unlock()       // Unlock the current cell
 
-            if isCrossingBoundary && mu != nil {
+            // If a boundary mutex was used, unlock it
+            if mu != nil {
                 mu.Unlock()
             }
 
             if moved {
-                break
+                break                        // Exit the direction loop if the shark has moved
             }
         }
 
-        // If shark didn't move to eat a fish, try to move to an empty cell
+        // If the shark didn't move by eating a fish, try to move to an empty cell
         if !moved {
             for dir := 0; dir < 4; dir++ {
-                direction := rand.Intn(4)
+                direction := rand.Intn(4)    // Randomly select a direction (0-3)
 
-                newX, newY := x, y
+                newX, newY := x, y           // Initialize new position variables
+
+                // Determine the new position based on the direction
                 switch direction {
                 case 0: // North
                     if y > 0 {
                         newY = y - 1
                     } else {
-                        newY = ydim - 1 // Wrap to bottom
+                        newY = ydim - 1      // Wrap around to the bottom
                     }
                 case 1: // South
                     if y < ydim-1 {
                         newY = y + 1
                     } else {
-                        newY = 0 // Wrap to top
+                        newY = 0             // Wrap around to the top
                     }
                 case 2: // East
                     if x < xdim-1 {
                         newX = x + 1
                     } else {
-                        newX = 0 // Wrap to left
+                        newX = 0             // Wrap around to the left
                     }
                 case 3: // West
                     if x > 0 {
                         newX = x - 1
                     } else {
-                        newX = xdim - 1 // Wrap to right
+                        newX = xdim - 1      // Wrap around to the right
                     }
                 }
 
-                // Check if the new position crosses the partition boundary
-                isCrossingBoundary := (newX < p.startX) || (newX > p.endX)
+                // Variable to hold the boundary mutex if crossing a boundary
                 var mu *sync.Mutex
-                if isCrossingBoundary {
-                    mu = g.boundaryMutexes[newX]
-                    mu.Lock()
+
+                // Check if the new position crosses a partition boundary
+                if newX < p.startX {
+                    // Crosses the left boundary; use the left boundary mutex
+                    mu = p.leftBoundaryMutex
+                    mu.Lock()                // Lock the left boundary mutex
+                } else if newX > p.endX {
+                    // Crosses the right boundary; use the right boundary mutex
+                    mu = p.rightBoundaryMutex
+                    mu.Lock()                // Lock the right boundary mutex
                 }
 
-                // Lock the grid cells before modifying
-                g.gridMutex[x][y].Lock()
-                g.gridMutex[newX][newY].Lock()
+                // Lock the grid cells before modifying to prevent data races
+                g.gridMutex[x][y].Lock()     // Lock the current cell
+                g.gridMutex[newX][newY].Lock() // Lock the new cell
 
-                // Check if the new position is empty
+                // Check if the new cell is empty
                 if g.grid[newX][newY] == nil {
-                    // Move the shark
-                    g.grid[x][y] = nil
-                    shark.SetPosition(newX, newY)
-                    g.grid[newX][newY] = shark
-                    shark.starve++
+                    // Move the shark to the new position
+                    g.grid[x][y] = nil       // Clear the current cell
+                    shark.SetPosition(newX, newY)// Update shark's position
+                    g.grid[newX][newY] = shark   // Place shark in the new cell
+
+                    shark.starve++           // Increment the shark's starvation counter
                     if shark.starve == 5 {
-                        // Shark dies
-                        g.grid[newX][newY] = nil
-                        localSharkRemovals = append(localSharkRemovals, shark)
+                        // Shark dies of starvation
+                        g.grid[newX][newY] = nil // Remove shark from the grid
+                        localSharkRemovals = append(localSharkRemovals, shark) // Mark for removal
                     } else {
+                        // Increment the shark's breed timer
                         shark.breedTimer++
                         if shark.breedTimer == 6 {
+                            // Shark is ready to breed
                             shark.breedTimer = 0
+                            // Create a new shark at the old position
                             newShark := &Shark{x: x, y: y, breedTimer: 0, starve: 0}
-                            g.grid[x][y] = newShark
-                            localSharkAdditions = append(localSharkAdditions, newShark)
+                            g.grid[x][y] = newShark          // Place new shark in the old cell
+                            localSharkAdditions = append(localSharkAdditions, newShark) // Add to local additions
                         }
                     }
-                    moved = true
+                    moved = true            // Mark that the shark has moved
                 }
 
-                g.gridMutex[newX][newY].Unlock()
-                g.gridMutex[x][y].Unlock()
+                // Unlock the grid cells after modification
+                g.gridMutex[newX][newY].Unlock() // Unlock the new cell
+                g.gridMutex[x][y].Unlock()       // Unlock the current cell
 
-                if isCrossingBoundary && mu != nil {
+                // If a boundary mutex was used, unlock it
+                if mu != nil {
                     mu.Unlock()
                 }
 
                 if moved {
-                    break
+                    break                    // Exit the direction loop if the shark has moved
                 }
             }
         }
@@ -533,24 +587,24 @@ func NewGame() *Game {
     }
 
     partitionSize := xdim / 2 // For two threads
-    game.partitions = []Partition{
-        {startX: 0, endX: partitionSize - 1},
-        {startX: partitionSize, endX: xdim - 1},
-    }
 
-    game.boundaryMutexes = make(map[int]*sync.Mutex)
-    for _, p := range game.partitions {
-        // Initialize mutexes for both boundaries
-        if p.endX+1 < xdim {
-            game.boundaryMutexes[p.endX+1] = &sync.Mutex{}
-        } else {
-            game.boundaryMutexes[0] = &sync.Mutex{} // Wrap-around
-        }
-        if p.startX-1 >= 0 {
-            game.boundaryMutexes[p.startX-1] = &sync.Mutex{}
-        } else {
-            game.boundaryMutexes[xdim-1] = &sync.Mutex{} // Wrap-around
-        }
+    // Create boundary mutexes
+    leftBoundaryMutex := &sync.Mutex{}
+    rightBoundaryMutex := &sync.Mutex{}
+
+    game.partitions = []Partition{
+        {
+            startX:             0,
+            endX:               partitionSize - 1,
+            leftBoundaryMutex:  leftBoundaryMutex,
+            rightBoundaryMutex: rightBoundaryMutex,
+        },
+        {
+            startX:             partitionSize,
+            endX:               xdim - 1,
+            leftBoundaryMutex:  rightBoundaryMutex,
+            rightBoundaryMutex: leftBoundaryMutex,
+        },
     }
 
     // Initialize grid mutexes

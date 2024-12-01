@@ -3,14 +3,15 @@ package main
 import (
 	//"fmt"
 
+	"encoding/csv"
 	"image/color"
 	"log"
 	"math/rand"
+	"os"
 	"sort"
+
+	//"strconv"
 	"time"
-	"encoding/csv"
-    "os"
-    "strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -18,27 +19,25 @@ import (
 
 // Constants for grid and window dimensions
 const (
-	xdim        = 50                // Number of cells in the x direction
-	ydim        = 50                // Number of cells in the y direction
+	xdim        = 150                // Number of cells in the x direction
+	ydim        = 150                // Number of cells in the y direction
 	windowXSize = 800                // Width of the window in pixels
 	windowYSize = 600                // Height of the window in pixels
 	cellXSize   = windowXSize / xdim // Width of each cell in pixels
 	cellYSize   = windowYSize / ydim // Height of each cell in pixels
 )
 
-
 // Game struct representing the state of the game
 // It contains a grid where each cell can have a color representing its state
 // (e.g., empty, fish, or shark).
 type Game struct {
-	grid  [xdim][ydim]Entity
-	fish  []Fish
-	shark []Shark
-	startTime time.Time
+	grid        [xdim][ydim]Entity
+	fish        []Fish
+	shark       []Shark
+	startTime   time.Time
 	simComplete bool // Track if the simulation is complete
-	totalFrames  int
+	totalFrames int
 }
-
 
 // Entity interface for all game entities (Fish)
 type Entity interface {
@@ -89,21 +88,21 @@ func (f *Fish) SetPosition(x, y int) {
 }
 
 func (g *Game) StartSimulation() {
-    g.startTime = time.Now()
-    g.totalFrames = 0
+	g.startTime = time.Now()
+	g.totalFrames = 0
 }
 
 func (g *Game) RecordFrame() {
-    g.totalFrames++
+	g.totalFrames++
 }
 
 // Call this after the simulation ends to calculate the FPS
 func (g *Game) CalculateAverageFPS() float64 {
-    elapsedTime := time.Since(g.startTime).Seconds()
-    if elapsedTime > 0 {
-        return float64(g.totalFrames) / elapsedTime
-    }
-    return 0.0
+	elapsedTime := time.Since(g.startTime).Seconds()
+	if elapsedTime > 0 {
+		return float64(g.totalFrames) / elapsedTime
+	}
+	return 0.0
 }
 
 // Update function, called every frame to update the game state
@@ -112,13 +111,13 @@ func (g *Game) Update() error {
 
 	g.RecordFrame()
 
-	if time.Since(g.startTime) > 10*time.Second {
-        g.simComplete = true
-        avgFPS := g.CalculateAverageFPS()
-        writeSimulationDataToCSV("simulation_results.csv", g, 1, avgFPS)
-        return nil
-    }
-	
+	if time.Since(g.startTime) > 30*time.Second {
+		g.simComplete = true
+		avgFPS := g.CalculateAverageFPS()
+		writeSimulationDataToCSV("simulation_results.csv", g, 1, avgFPS)
+		return nil
+	}
+
 	for i := range g.fish {
 		fish := &g.fish[i]
 		x, y := fish.GetPosition()
@@ -193,7 +192,7 @@ func (g *Game) Update() error {
 
 			newX, newY := x, y
 			switch direction {
-				case 0: // North
+			case 0: // North
 				if y > 0 {
 					newY = y - 1
 				} else {
@@ -228,7 +227,7 @@ func (g *Game) Update() error {
 					shark.SetPosition(newX, newY)
 					g.grid[newX][newY] = shark // Set new position
 					shark.starve = 0
-					shark.breedTimer++         // Increment breed timer
+					shark.breedTimer++ // Increment breed timer
 					if shark.breedTimer == 5 {
 						shark.breedTimer = 0
 						newShark := Shark{x: x, y: y, breedTimer: 0, starve: 0}
@@ -256,7 +255,7 @@ func (g *Game) Update() error {
 
 				newX, newY := x, y
 				switch direction {
-					case 0: // North
+				case 0: // North
 					if y > 0 {
 						newY = y - 1
 					} else {
@@ -295,7 +294,7 @@ func (g *Game) Update() error {
 							g.grid[newX][newY] = nil
 							removedShark = append(removedShark, i)
 						}
-						shark.breedTimer++         // Increment breed timer
+						shark.breedTimer++ // Increment breed timer
 						if shark.breedTimer == 6 {
 							shark.breedTimer = 0
 							newShark := Shark{x: x, y: y, breedTimer: 0, starve: 0}
@@ -312,7 +311,7 @@ func (g *Game) Update() error {
 
 	// Remove fish that were eaten
 	sort.Sort(sort.Reverse(sort.IntSlice(removedFish))) // Sort in reverse order to remove elements from the end first, avoiding index shift issues
-	for _, index := range removedFish { // Iterate over the sorted indices and remove the fish
+	for _, index := range removedFish {                 // Iterate over the sorted indices and remove the fish
 		if index < len(g.fish) {
 			g.fish = append(g.fish[:index], g.fish[index+1:]...)
 		}
@@ -320,7 +319,7 @@ func (g *Game) Update() error {
 
 	// Remove sharks that starved
 	sort.Sort(sort.Reverse(sort.IntSlice(removedShark))) // Sort in reverse order to remove elements from the end first, avoiding index shift issues
-	for _, index := range removedShark { // Iterate over the sorted indices and remove the sharks
+	for _, index := range removedShark {                 // Iterate over the sorted indices and remove the sharks
 		if index < len(g.shark) {
 			g.shark = append(g.shark[:index], g.shark[index+1:]...)
 		}
@@ -331,7 +330,6 @@ func (g *Game) Update() error {
 
 	return nil
 }
-
 
 // Draw function, called every frame to render the game screen
 // It fills the screen with black and then draws each cell with its assigned color
@@ -352,7 +350,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				case "fish":
 					rectColor = color.RGBA{0, 221, 255, 1} // Green for fish
 				case "shark":
-					rectColor = color.RGBA{190, 44,190, 1} // Red for shark
+					rectColor = color.RGBA{190, 44, 190, 1} // Red for shark
 				}
 			} else {
 				rectColor = color.RGBA{0, 0, 0, 0} // Blue for empty
@@ -365,8 +363,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	if g.simComplete {
 
-        ebitenutil.DebugPrintAt(screen, "Sim Complete", windowXSize/2-50, windowYSize/2)
-    }
+		ebitenutil.DebugPrintAt(screen, "Sim Complete", windowXSize/2-50, windowYSize/2)
+	}
 }
 
 // Layout function, called to set the screen size
@@ -414,7 +412,6 @@ func main() {
 	// Set the window size and title
 	ebiten.SetWindowSize(windowXSize, windowYSize)
 	ebiten.SetWindowTitle("Ebiten Wa-Tor World")
-	
 
 	// Run the game loop, which will call Update and Draw repeatedly
 	if err := ebiten.RunGame(game); err != nil {
@@ -423,38 +420,38 @@ func main() {
 }
 
 func writeSimulationDataToCSV(filename string, g *Game, threadCount int, frameRate float64) {
-    // Open the CSV file in append mode (create if it doesn't exist, write-only mode)
-    file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-    if err != nil {
-        // Log an error if the file cannot be opened
-        log.Fatalf("failed to open file: %v", err)
-    }
-    defer file.Close() // Ensure the file is closed when the function ends
+	// Open the CSV file in append mode (create if it doesn't exist, write-only mode)
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		// Log an error if the file cannot be opened
+		log.Fatalf("failed to open file: %v", err)
+	}
+	defer file.Close() // Ensure the file is closed when the function ends
 
-    // Create a CSV writer to write data into the file
-    writer := csv.NewWriter(file)
-    defer writer.Flush() // Ensure all buffered data is written to the file before the function ends
+	// Create a CSV writer to write data into the file
+	writer := csv.NewWriter(file)
+	defer writer.Flush() // Ensure all buffered data is written to the file before the function ends
 
-    // Get the file's stats to check if the file is empty
-    stat, err := file.Stat()
-    if err != nil {
-        // Log an error if the file stats cannot be retrieved
-        log.Fatalf("failed to get file stats: %v", err)
-    }
-    // If the file is empty, write the header row to the CSV file
-    if stat.Size() == 0 {
-        writer.Write([]string{"Grid Size", "Thread Count", "Frame Rate"})
-    }
+	// Get the file's stats to check if the file is empty
+	stat, err := file.Stat()
+	if err != nil {
+		// Log an error if the file stats cannot be retrieved
+		log.Fatalf("failed to get file stats: %v", err)
+	}
+	// If the file is empty, write the header row to the CSV file
+	if stat.Size() == 0 {
+		writer.Write([]string{"Grid Size", "Thread Count", "Frame Rate"})
+	}
 
-    // Prepare the data to write to the CSV file
-    data := []string{
-        strconv.Itoa(len(g.grid)),             // Convert the grid size to a string
-        strconv.Itoa(threadCount),             // Convert the thread count to a string
-        strconv.FormatFloat(frameRate, 'f', 2, 64), // Convert the frame rate to a string with 2 decimal places
-    }
-    // Write the prepared data to the CSV file
-    if err := writer.Write(data); err != nil {
-        // Log an error if the data cannot be written to the file
-        log.Fatalf("failed to write to csv: %v", err)
-    }
+	// Prepare the data to write to the CSV file
+	//data := []string{
+	//    strconv.Itoa(xdim * ydim),             // Convert the grid size to a string
+	//    strconv.Itoa(threadCount),             // Convert the thread count to a string
+	//    strconv.FormatFloat(frameRate, 'f', 2, 64), // Convert the frame rate to a string with 2 decimal places
+	//}
+	// Write the prepared data to the CSV file
+	//if err := writer.Write(data); err != nil {
+	// Log an error if the data cannot be written to the file
+	//    log.Fatalf("failed to write to csv: %v", err)
+	//}
 }

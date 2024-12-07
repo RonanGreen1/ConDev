@@ -6,7 +6,7 @@ import (
     "log"
     "math/rand"
     "os"
-    //"strconv"
+    "strconv"
     "sync"
     "time"
 
@@ -16,10 +16,10 @@ import (
 
 // Constants for grid and window dimensions
 const (
-    xdim        = 50                 // Number of cells in the x direction
-    ydim        = 50                 // Number of cells in the y direction
+    xdim        = 400                 // Number of cells in the x direction
+    ydim        = 400                 // Number of cells in the y direction
     windowXSize = 800                // Width of the window in pixels
-    windowYSize = 600                // Height of the window in pixels
+    windowYSize = 800                // Height of the window in pixels
     cellXSize   = windowXSize / xdim // Width of each cell in pixels
     cellYSize   = windowYSize / ydim // Height of each cell in pixels
 )
@@ -649,14 +649,14 @@ func writeSimulationDataToCSV(filename string, g *Game, partitions int, frameRat
     }
 
     // Prepare the data to write to the CSV file
-    //data := []string{
-    //    strconv.Itoa(xdim * ydim),
-    //    strconv.Itoa(len(g.partitions)), // Convert the thread count to a string
-    //    strconv.FormatFloat(frameRate, 'f', 2, 64), // Convert the frame rate to a string with 2 decimal places
-    //}
+    data := []string{
+        strconv.Itoa(xdim * ydim),
+        strconv.Itoa(len(g.partitions)), // Convert the thread count to a string
+        strconv.FormatFloat(frameRate, 'f', 2, 64), // Convert the frame rate to a string with 2 decimal places
+    }
     // Write the prepared data to the CSV file
-    //if err := writer.Write(data); err != nil {
-    //    // Log an error if the data cannot be written to the file
-    //    log.Fatalf("failed to write to csv: %v", err)
-    //}
+    if err := writer.Write(data); err != nil {
+        // Log an error if the data cannot be written to the file
+        log.Fatalf("failed to write to csv: %v", err)
+    }
 }

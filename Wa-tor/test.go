@@ -1,28 +1,25 @@
 package main
 
 import (
-	//"fmt"
+	"encoding/csv"        // Provides functions for reading and writing CSV files.
+	"image/color"         // Defines colors and their manipulation for image processing.
+	"log"                 // Provides logging functionality for debugging and error reporting.
+	"math/rand"           // Used to generate random numbers, useful for simulation randomness.
+	"os"                  // Provides functions for interacting with the operating system, such as file handling.
+	"sort"                // Implements sorting algorithms for slices and user-defined collections.
+	"strconv"             // Provides functions for converting strings to numbers and vice versa.
+	"time"                // Provides time-related functionality, such as measuring elapsed time and delays.
 
-	"encoding/csv"
-	"image/color"
-	"log"
-	"math/rand"
-	"os"
-	"sort"
-
-	//"strconv"
-	"time"
-
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2"            // A game library for building 2D games in Go.
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil" // Utility functions for Ebiten, such as drawing rectangles or displaying text.
 )
 
 // Constants for grid and window dimensions
 const (
-	xdim        = 150                // Number of cells in the x direction
-	ydim        = 150                // Number of cells in the y direction
+	xdim        = 400                // Number of cells in the x direction
+	ydim        = 400                // Number of cells in the y direction
 	windowXSize = 800                // Width of the window in pixels
-	windowYSize = 600                // Height of the window in pixels
+	windowYSize = 800                // Height of the window in pixels
 	cellXSize   = windowXSize / xdim // Width of each cell in pixels
 	cellYSize   = windowYSize / ydim // Height of each cell in pixels
 )
@@ -111,7 +108,7 @@ func (g *Game) Update() error {
 
 	g.RecordFrame()
 
-	if time.Since(g.startTime) > 30*time.Second {
+	if time.Since(g.startTime) > 10*time.Second {
 		g.simComplete = true
 		avgFPS := g.CalculateAverageFPS()
 		writeSimulationDataToCSV("simulation_results.csv", g, 1, avgFPS)
@@ -444,14 +441,14 @@ func writeSimulationDataToCSV(filename string, g *Game, threadCount int, frameRa
 	}
 
 	// Prepare the data to write to the CSV file
-	//data := []string{
-	//    strconv.Itoa(xdim * ydim),             // Convert the grid size to a string
-	//    strconv.Itoa(threadCount),             // Convert the thread count to a string
-	//    strconv.FormatFloat(frameRate, 'f', 2, 64), // Convert the frame rate to a string with 2 decimal places
-	//}
+	data := []string{
+	    strconv.Itoa(xdim * ydim),             // Convert the grid size to a string
+	    strconv.Itoa(threadCount),             // Convert the thread count to a string
+	    strconv.FormatFloat(frameRate, 'f', 2, 64), // Convert the frame rate to a string with 2 decimal places
+	}
 	// Write the prepared data to the CSV file
-	//if err := writer.Write(data); err != nil {
+	if err := writer.Write(data); err != nil {
 	// Log an error if the data cannot be written to the file
-	//    log.Fatalf("failed to write to csv: %v", err)
-	//}
+	    log.Fatalf("failed to write to csv: %v", err)
+	}
 }

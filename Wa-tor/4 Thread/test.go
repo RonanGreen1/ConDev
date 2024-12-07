@@ -10,6 +10,7 @@ import (
     "sync"
     "time"
     "unsafe"
+    "strconv"
 
     "github.com/hajimehoshi/ebiten/v2"
     "github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -20,7 +21,7 @@ const (
     xdim        = 400                 // Number of cells in the x direction
     ydim        = 400                 // Number of cells in the y direction
     windowXSize = 800                // Width of the window in pixels
-    windowYSize = 600                // Height of the window in pixels
+    windowYSize = 800                // Height of the window in pixels
     cellXSize   = windowXSize / xdim // Width of each cell in pixels
     cellYSize   = windowYSize / ydim // Height of each cell in pixels
 )
@@ -123,8 +124,8 @@ func (g *Game) Update() error {
 
     if time.Since(g.startTime) > 10*time.Second {
         g.simComplete = true
-        //avgFPS := g.CalculateAverageFPS()
-        //writeSimulationDataToCSV("simulation_results_4_threads.csv", g, len(g.partitions), avgFPS)
+        avgFPS := g.CalculateAverageFPS()
+        writeSimulationDataToCSV("simulation_results_4_threads.csv", g, len(g.partitions), avgFPS)
         return nil
     }
 
@@ -751,17 +752,15 @@ func writeSimulationDataToCSV(filename string, g *Game, partitions int, frameRat
     }
 
     // Prepare the data to write to the CSV file
-    // Uncomment and adjust the following lines if you want to write data to the CSV
-    /*
-        data := []string{
-            strconv.Itoa(xdim * ydim),
-            strconv.Itoa(len(g.partitions)), // Convert the thread count to a string
-            strconv.FormatFloat(frameRate, 'f', 2, 64), // Convert the frame rate to a string with 2 decimal places
-        }
-        // Write the prepared data to the CSV file
-        if err := writer.Write(data); err != nil {
-            // Log an error if the data cannot be written to the file
+    data := []string{
+        strconv.Itoa(xdim * ydim),
+        strconv.Itoa(len(g.partitions)), // Convert the thread count to a string
+        strconv.FormatFloat(frameRate, 'f', 2, 64), // Convert the frame rate to a string with 2 decimal places
+    }
+    // Write the prepared data to the CSV file
+    if err := writer.Write(data); err != nil {
+        // Log an error if the data cannot be written to the file
             log.Fatalf("failed to write to csv: %v", err)
-        }
-    */
+    }
+
 }

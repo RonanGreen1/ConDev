@@ -35,7 +35,6 @@ type Game struct {
     partitions  []Partition
     fishMutex   sync.Mutex
     sharkMutex  sync.Mutex
-    gridMutex   [xdim][ydim]sync.Mutex
 }
 
 // Partition struct representing a section of the grid
@@ -289,10 +288,6 @@ func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark) 
                 mu.Lock()                    // Lock the right boundary mutex
             }
 
-            // Lock the grid cells before modifying to prevent data races
-            g.gridMutex[x][y].Lock()         // Lock the current cell
-            g.gridMutex[newX][newY].Lock()   // Lock the new cell
-
             // Check if the new cell is empty
             if g.grid[newX][newY] == nil {
                 // Move the fish to the new position
@@ -313,9 +308,6 @@ func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark) 
                 moved = true                // Mark that the fish has moved
             }
 
-            // Unlock the grid cells after modification
-            g.gridMutex[newX][newY].Unlock() // Unlock the new cell
-            g.gridMutex[x][y].Unlock()       // Unlock the current cell
 
             // If a boundary mutex was used, unlock it
             if mu != nil {
@@ -387,10 +379,6 @@ func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark) 
                 mu.Lock()                    // Lock the right boundary mutex
             }
 
-            // Lock the grid cells before modifying to prevent data races
-            g.gridMutex[x][y].Lock()         // Lock the current cell
-            g.gridMutex[newX][newY].Lock()   // Lock the new cell
-
             // Check if the new cell is occupied by a fish
             if g.grid[newX][newY] != nil && g.grid[newX][newY].GetType() == "fish" {
                 // Move the shark to the new position
@@ -427,9 +415,6 @@ func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark) 
                 moved = true                // Mark that the shark has moved
             }
 
-            // Unlock the grid cells after modification
-            g.gridMutex[newX][newY].Unlock() // Unlock the new cell
-            g.gridMutex[x][y].Unlock()       // Unlock the current cell
 
             // If a boundary mutex was used, unlock it
             if mu != nil {
@@ -490,10 +475,6 @@ func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark) 
                     mu.Lock()                // Lock the right boundary mutex
                 }
 
-                // Lock the grid cells before modifying to prevent data races
-                g.gridMutex[x][y].Lock()     // Lock the current cell
-                g.gridMutex[newX][newY].Lock() // Lock the new cell
-
                 // Check if the new cell is empty
                 if g.grid[newX][newY] == nil {
                     // Move the shark to the new position
@@ -521,9 +502,6 @@ func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark) 
                     moved = true            // Mark that the shark has moved
                 }
 
-                // Unlock the grid cells after modification
-                g.gridMutex[newX][newY].Unlock() // Unlock the new cell
-                g.gridMutex[x][y].Unlock()       // Unlock the current cell
 
                 // If a boundary mutex was used, unlock it
                 if mu != nil {
@@ -607,12 +585,6 @@ func NewGame() *Game {
         },
     }
 
-    // Initialize grid mutexes
-    for i := 0; i < xdim; i++ {
-        for j := 0; j < ydim; j++ {
-            game.gridMutex[i][j] = sync.Mutex{}
-        }
-    }
 
     // Initialize grid with random fish or empty spaces
     for i := 0; i < xdim; i++ {

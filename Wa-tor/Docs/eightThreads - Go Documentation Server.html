@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<!-- saved from url=(0045)http://localhost:6060/pkg/Wator/eightThreads/ -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#375EAB">
+
+  <title>eightThreads - Go Documentation Server</title>
+
+<link type="text/css" rel="stylesheet" href="./eightThreads - Go Documentation Server_files/style.css">
+
+<script>window.initFuncs = [];</script>
+<script src="./eightThreads - Go Documentation Server_files/jquery.js.download" defer=""></script>
+
+
+
+<script>var goVersion = "go1.23.1";</script>
+<script src="./eightThreads - Go Documentation Server_files/godocs.js.download" defer=""></script>
+</head>
+<body>
+
+<div id="lowframe" style="position: fixed; bottom: 0; left: 0; height: 0; width: 100%; border-top: thin solid grey; background-color: white; overflow: auto;">
+...
+</div><!-- #lowframe -->
+
+<div id="topbar" class="wide"><div class="container">
+<div class="top-heading" id="heading-wide"><a href="http://localhost:6060/pkg/">Go Documentation Server</a></div>
+<div class="top-heading" id="heading-narrow"><a href="http://localhost:6060/pkg/">GoDoc</a></div>
+<a href="http://localhost:6060/pkg/Wator/eightThreads/#" id="menu-button"><span id="menu-button-arrow">▽</span></a>
+<form method="GET" action="http://localhost:6060/search">
+<div id="menu" style="min-width: 60px;">
+
+<span class="search-box"><input type="search" id="search" name="q" placeholder="Search" aria-label="Search" required=""><button type="submit"><span><!-- magnifying glass: --><svg width="24" height="24" viewBox="0 0 24 24"><title>submit search</title><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></button></span>
+</div>
+</form>
+
+</div></div>
+
+
+
+<div id="page" class="wide" tabindex="-1" style="outline: 0px;">
+<div class="container">
+
+
+  <h1>
+    Package eightThreads
+    <span class="text-muted"></span>
+  </h1>
+
+
+
+
+
+
+
+<div id="nav"></div>
+
+
+<!--
+	Copyright 2009 The Go Authors. All rights reserved.
+	Use of this source code is governed by a BSD-style
+	license that can be found in the LICENSE file.
+-->
+<!--
+	Note: Static (i.e., not template-generated) href and id
+	attributes start with "pkg-" to make it impossible for
+	them to conflict with generated attributes (some of which
+	correspond to Go identifiers).
+-->
+
+	<script>
+	document.ANALYSIS_DATA = null;
+	document.CALLGRAPH = null;
+	</script>
+
+	
+		
+		<div id="short-nav">
+			<dl>
+			<dd><code>import "Wator/eightThreads"</code></dd>
+			</dl>
+			<dl>
+			<dd><a href="http://localhost:6060/pkg/Wator/eightThreads/#pkg-overview" class="overviewLink">Overview</a></dd>
+			<dd><a href="http://localhost:6060/pkg/Wator/eightThreads/#pkg-index" class="indexLink">Index</a></dd>
+			
+			
+			</dl>
+		</div>
+		<!-- The package's Name is printed as title by the top-level template -->
+		<div id="pkg-overview" class="toggleVisible">
+			<div class="collapsed">
+				<h2 class="toggleButton" title="Click to show Overview section">Overview ▹</h2>
+			</div>
+			<div class="expanded">
+				<h2 class="toggleButton" title="Click to hide Overview section">Overview ▾</h2>
+				
+				
+			</div>
+		</div>
+
+		<div id="pkg-index" class="toggleVisible">
+		<div class="collapsed">
+			<h2 class="toggleButton" title="Click to show Index section">Index ▹</h2>
+		</div>
+		<div class="expanded">
+			<h2 class="toggleButton" title="Click to hide Index section">Index ▾</h2>
+
+		<!-- Table of contents for API; must be named manual-nav to turn off auto nav. -->
+			<div id="manual-nav">
+			<dl>
+			
+			
+			
+			
+				
+				<dd><a href="http://localhost:6060/pkg/Wator/eightThreads/#Entity">type Entity</a></dd>
+				
+				
+			
+				
+				<dd><a href="http://localhost:6060/pkg/Wator/eightThreads/#Fish">type Fish</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#Fish.GetPosition">func (f *Fish) GetPosition() (int, int)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#Fish.GetType">func (f *Fish) GetType() string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#Fish.SetPosition">func (f *Fish) SetPosition(x, y int)</a></dd>
+				
+			
+				
+				<dd><a href="http://localhost:6060/pkg/Wator/eightThreads/#Game">type Game</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#NewGame">func NewGame() *Game</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#Game.CalculateAverageFPS">func (g *Game) CalculateAverageFPS() float64</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#Game.Draw">func (g *Game) Draw(screen *ebiten.Image)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#Game.Layout">func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#Game.RecordFrame">func (g *Game) RecordFrame()</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#Game.RunPartition">func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#Game.StartSimulation">func (g *Game) StartSimulation()</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#Game.Update">func (g *Game) Update() error</a></dd>
+				
+			
+				
+				<dd><a href="http://localhost:6060/pkg/Wator/eightThreads/#Partition">type Partition</a></dd>
+				
+				
+			
+				
+				<dd><a href="http://localhost:6060/pkg/Wator/eightThreads/#Shark">type Shark</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#Shark.GetPosition">func (s *Shark) GetPosition() (int, int)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#Shark.GetType">func (s *Shark) GetType() string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="http://localhost:6060/pkg/Wator/eightThreads/#Shark.SetPosition">func (s *Shark) SetPosition(x, y int)</a></dd>
+				
+			
+			
+			</dl>
+			</div><!-- #manual-nav -->
+
+		
+
+		
+			<h3>Package files</h3>
+			<p>
+			<span style="font-size:90%">
+			
+				<a href="http://localhost:6060/src/Wator/eightThreads/test.go">test.go</a>
+			
+			</span>
+			</p>
+		
+		</div><!-- .expanded -->
+		</div><!-- #pkg-index -->
+
+		
+
+		
+		
+		
+		
+			
+			
+			<h2 id="Entity">type <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=3207:3501#L47">Entity</a>
+				<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Entity">¶</a>
+				
+				
+			</h2>
+			<p>Entity defines a common interface for all entities in the game (e.g., fish, shark).
+
+			</p><pre>type Entity interface {
+    GetType() <a href="http://localhost:6060/pkg/builtin/#string">string</a>         <span class="comment">// Returns the type of the entity (e.g., "fish" or "shark").</span>
+    GetPosition() (<a href="http://localhost:6060/pkg/builtin/#int">int</a>, <a href="http://localhost:6060/pkg/builtin/#int">int</a>) <span class="comment">// Returns the current position (x, y) of the entity on the grid.</span>
+    SetPosition(x, y <a href="http://localhost:6060/pkg/builtin/#int">int</a>)    <span class="comment">// Updates the position of the entity on the grid.</span>
+}</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="Fish">type <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=4263:4419#L77">Fish</a>
+				<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Fish">¶</a>
+				
+				
+			</h2>
+			<p>Fish represents a fish entity in the simulation.
+
+			</p><pre>type Fish struct {
+    <span class="comment">// contains filtered or unexported fields</span>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="Fish.GetPosition">func (*Fish) <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=4610:4649#L88">GetPosition</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Fish.GetPosition">¶</a>
+					
+					
+				</h3>
+				<pre>func (f *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Fish">Fish</a>) GetPosition() (<a href="http://localhost:6060/pkg/builtin/#int">int</a>, <a href="http://localhost:6060/pkg/builtin/#int">int</a>)</pre>
+				<p>GetPosition returns the current position of the fish on the grid.
+
+				
+				
+				
+			
+				
+				</p><h3 id="Fish.GetType">func (*Fish) <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=4484:4515#L83">GetType</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Fish.GetType">¶</a>
+					
+					
+				</h3>
+				<pre>func (f *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Fish">Fish</a>) GetType() <a href="http://localhost:6060/pkg/builtin/#string">string</a></pre>
+				<p>GetType returns the type of the entity, which is "fish".
+
+				
+				
+				
+			
+				
+				</p><h3 id="Fish.SetPosition">func (*Fish) <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=4738:4774#L93">SetPosition</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Fish.SetPosition">¶</a>
+					
+					
+				</h3>
+				<pre>func (f *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Fish">Fish</a>) SetPosition(x, y <a href="http://localhost:6060/pkg/builtin/#int">int</a>)</pre>
+				<p>SetPosition updates the position of the fish on the grid.
+
+				
+				
+				
+			
+		
+			
+			
+			</p><h2 id="Game">type <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=1942:2770#L20">Game</a>
+				<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Game">¶</a>
+				
+				
+			</h2>
+			<p>Game struct representing the state of the game
+
+			</p><pre>type Game struct {
+    <span class="comment">// contains filtered or unexported fields</span>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="NewGame">func <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=32517:32537#L770">NewGame</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#NewGame">¶</a>
+					
+					
+				</h3>
+				<pre>func NewGame() *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Game">Game</a></pre>
+				<p>NewGame initializes a new game instance with a grid of cells and partitions the grid into eight regions for multithreaded processing.
+</p><p>Returns:
+</p><pre>*Game: A pointer to the newly initialized game instance.
+</pre>
+<p>Description:
+This function sets up the simulation's state, including initializing the grid, creating fish and shark entities, and dividing
+the grid into eight partitions for multithreading. Boundary mutexes are defined for thread-safe operations at partition edges.
+
+				
+				
+			
+
+			
+				
+				</p><h3 id="Game.CalculateAverageFPS">func (*Game) <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=5364:5408#L111">CalculateAverageFPS</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Game.CalculateAverageFPS">¶</a>
+					
+					
+				</h3>
+				<pre>func (g *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Game">Game</a>) CalculateAverageFPS() <a href="http://localhost:6060/pkg/builtin/#float64">float64</a></pre>
+				<p>CalculateAverageFPS computes the average frames per second (FPS) of the simulation.
+Returns 0.0 if no time has elapsed to avoid division by zero.
+
+				
+				
+				
+			
+				
+				</p><h3 id="Game.Draw">func (*Game) <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=30180:30221#L712">Draw</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Game.Draw">¶</a>
+					
+					
+				</h3>
+				<pre>func (g *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Game">Game</a>) Draw(screen *ebiten.<a href="http://localhost:6060/pkg/Wator/eightThreads/#Image">Image</a>)</pre>
+				<p>Draw renders the game grid and entities to the screen.
+</p><p>Input:
+</p><ul>
+<li>screen (*ebiten.Image): The screen object where the game grid and entities will be drawn.
+</li></ul>
+<p>Output:
+</p><ul>
+<li>None (updates the screen object directly).
+</li></ul>
+<p>Functionality:
+This function updates the game display by iterating over the game grid and rendering each cell with a color corresponding to its content.
+- "fish" entities are drawn as light blue rectangles.
+- "shark" entities are drawn as purple rectangles.
+- Empty cells are transparent.
+Additionally, if the simulation is marked as complete, a completion message is displayed at the center of the screen.
+
+				
+				
+				
+			
+				
+				</p><h3 id="Game.Layout">func (*Game) <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=31909:31974#L758">Layout</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Game.Layout">¶</a>
+					
+					
+				</h3>
+				<pre>func (g *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Game">Game</a>) Layout(outsideWidth, outsideHeight <a href="http://localhost:6060/pkg/builtin/#int">int</a>) (<a href="http://localhost:6060/pkg/builtin/#int">int</a>, <a href="http://localhost:6060/pkg/builtin/#int">int</a>)</pre>
+				<p>Layout sets the dimensions of the game window.
+</p><p>Input:
+</p><ul>
+<li>outsideWidth (int): The external width of the window, passed by the game engine.
+</li><li>outsideHeight (int): The external height of the window, passed by the game engine.
+</li></ul>
+<p>Output:
+</p><ul>
+<li>(int, int): The internal width and height of the game window, which remain constant.
+</li></ul>
+<p>Functionality:
+This function ensures that the game's window dimensions are consistent regardless of external inputs.
+It is called by the Ebiten game engine to determine the size of the game's rendering area.
+
+				
+				
+				
+			
+				
+				</p><h3 id="Game.RecordFrame">func (*Game) <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=5155:5183#L105">RecordFrame</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Game.RecordFrame">¶</a>
+					
+					
+				</h3>
+				<pre>func (g *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Game">Game</a>) RecordFrame()</pre>
+				<p>RecordFrame increments the total frame count by 1.
+
+				
+				
+				
+			
+				
+				</p><h3 id="Game.RunPartition">func (*Game) <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=13395:13474#L275">RunPartition</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Game.RunPartition">¶</a>
+					
+					
+				</h3>
+				<pre>func (g *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Game">Game</a>) RunPartition(p <a href="http://localhost:6060/pkg/Wator/eightThreads/#Partition">Partition</a>) ([]*<a href="http://localhost:6060/pkg/Wator/eightThreads/#Fish">Fish</a>, []*<a href="http://localhost:6060/pkg/Wator/eightThreads/#Fish">Fish</a>, []*<a href="http://localhost:6060/pkg/Wator/eightThreads/#Shark">Shark</a>, []*<a href="http://localhost:6060/pkg/Wator/eightThreads/#Shark">Shark</a>)</pre>
+				<p>RunPartition processes a specific partition of the grid for fish and shark movements and updates.
+</p><p>Input:
+</p><ul>
+<li>p (Partition): A section of the grid defined by start and end x-coordinates and associated boundary mutexes.
+</li></ul>
+<p>Output:
+</p><ul>
+<li>([]*Fish, []*Fish, []*Shark, []*Shark):
+</li><li>A slice of new fish added within the partition.
+</li><li>A slice of fish to be removed from the partition.
+</li><li>A slice of new sharks added within the partition.
+</li><li>A slice of sharks to be removed from the partition.
+</li></ul>
+<p>Functionality:
+1. Copies the current lists of fish and sharks to avoid concurrent access issues.
+2. Processes each fish within the partition, attempting to:
+</p><ul>
+<li>Move it to a new cell.
+</li><li>Breed a new fish if the breed timer threshold is reached.
+</li></ul>
+<p>3. Ensures thread safety when crossing partition boundaries by locking and unlocking boundary mutexes.
+
+				
+				
+				
+			
+				
+				</p><h3 id="Game.StartSimulation">func (*Game) <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=4909:4941#L99">StartSimulation</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Game.StartSimulation">¶</a>
+					
+					
+				</h3>
+				<pre>func (g *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Game">Game</a>) StartSimulation()</pre>
+				<p>StartSimulation initializes the simulation by setting the start time and resetting the frame counter.
+
+				
+				
+				
+			
+				
+				</p><h3 id="Game.Update">func (*Game) <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=6526:6555#L136">Update</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Game.Update">¶</a>
+					
+					
+				</h3>
+				<pre>func (g *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Game">Game</a>) Update() <a href="http://localhost:6060/pkg/builtin/#error">error</a></pre>
+				<p>Update updates the game state every frame.
+</p><p>Input:
+</p><ul>
+<li>None (operates on the game state stored within the Game object).
+</li></ul>
+<p>Output:
+</p><ul>
+<li>error: Returns nil unless an error occurs during the update (e.g., issues with saving results).
+</li></ul>
+<p>Functionality:
+This function handles the simulation logic, including:
+1. Recording each frame to track simulation progress.
+2. Checking if the simulation has exceeded its time limit (10 seconds):
+</p><ul>
+<li>If complete, calculates the average FPS and writes the results to a CSV file.
+</li></ul>
+<p>3. Dividing the grid into partitions for concurrent updates using goroutines.
+</p><ul>
+<li>Each partition processes entities within its bounds.
+</li></ul>
+<p>4. Waiting for all partitions to finish using a `sync.WaitGroup`.
+5. Consolidating updates to the game state after all partitions are processed.
+
+				
+				
+				
+			
+		
+			
+			
+			</p><h2 id="Partition">type <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=2830:3115#L33">Partition</a>
+				<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Partition">¶</a>
+				
+				
+			</h2>
+			<p>Partition struct representing a section of the grid
+
+			</p><pre>type Partition struct {
+    <span class="comment">// contains filtered or unexported fields</span>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="Shark">type <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=3560:3819#L54">Shark</a>
+				<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Shark">¶</a>
+				
+				
+			</h2>
+			<p>Shark represents a shark entity in the simulation.
+
+			</p><pre>type Shark struct {
+    <span class="comment">// contains filtered or unexported fields</span>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="Shark.GetPosition">func (*Shark) <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=4014:4054#L66">GetPosition</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Shark.GetPosition">¶</a>
+					
+					
+				</h3>
+				<pre>func (s *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Shark">Shark</a>) GetPosition() (<a href="http://localhost:6060/pkg/builtin/#int">int</a>, <a href="http://localhost:6060/pkg/builtin/#int">int</a>)</pre>
+				<p>GetPosition returns the current position of the shark on the grid.
+
+				
+				
+				
+			
+				
+				</p><h3 id="Shark.GetType">func (*Shark) <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=3885:3917#L61">GetType</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Shark.GetType">¶</a>
+					
+					
+				</h3>
+				<pre>func (s *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Shark">Shark</a>) GetType() <a href="http://localhost:6060/pkg/builtin/#string">string</a></pre>
+				<p>GetType returns the type of the entity, which is "shark".
+
+				
+				
+				
+			
+				
+				</p><h3 id="Shark.SetPosition">func (*Shark) <a href="http://localhost:6060/src/Wator/eightThreads/test.go?s=4144:4181#L71">SetPosition</a>
+					<a class="permalink" href="http://localhost:6060/pkg/Wator/eightThreads/#Shark.SetPosition">¶</a>
+					
+					
+				</h3>
+				<pre>func (s *<a href="http://localhost:6060/pkg/Wator/eightThreads/#Shark">Shark</a>) SetPosition(x, y <a href="http://localhost:6060/pkg/builtin/#int">int</a>)</pre>
+				<p>SetPosition updates the position of the shark on the grid.
+
+				
+				
+				
+			
+		
+	
+
+	
+
+
+
+
+
+
+
+</p><div id="footer">
+Build version go1.23.1.<br>
+Except as <a href="https://developers.google.com/site-policies#restrictions">noted</a>,
+the content of this page is licensed under the
+Creative Commons Attribution 3.0 License,
+and code is licensed under a <a href="http://localhost:6060/LICENSE">BSD license</a>.<br>
+<a href="https://golang.org/doc/tos.html">Terms of Service</a> |
+<a href="https://www.google.com/intl/en/policies/privacy/">Privacy Policy</a>
+</div>
+
+</div><!-- .container -->
+</div><!-- #page -->
+
+
+</body></html>

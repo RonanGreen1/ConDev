@@ -1,4 +1,4 @@
-module 2threads
+module twoThreads
 
 go 1.23.1
 

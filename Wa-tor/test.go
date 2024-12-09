@@ -1,4 +1,4 @@
-package main
+package Wator
 
 import (
 	"encoding/csv"        // Provides functions for reading and writing CSV files.

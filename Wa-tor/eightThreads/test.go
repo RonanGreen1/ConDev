@@ -1,4 +1,4 @@
-package main
+package eightThreads
 
 import (
     "encoding/csv"          // Handles reading and writing CSV files, used for logging simulation data.

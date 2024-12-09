@@ -63,7 +63,7 @@ Wa-Tor © 2024 by Ronan Green is licensed under CC BY-NC 4.0. To view a copy of 
     
 - **Performance Optimisation**: Balancing granularity of partitions and thread overhead.
     
-- **Visual Debugging**: Ensuring the visual representation aligned with the simulation logic.
+- **Grid Boundries**: Ensuring the entities di not leave the grid boundires.
     
 
 ## Design Highlights
@@ -86,6 +86,8 @@ Wa-Tor © 2024 by Ronan Green is licensed under CC BY-NC 4.0. To view a copy of 
 2. View the simulation window where sharks, fish, and empty spaces are represented by colours.
     
 3. Adjust grid dimensions or simulation parameters in the source code to experiment with different configurations.
+
+4. for Go Doc docs run `godoc -http=:606` and then open `http://localhost:6060/pkg/`
     
 
 ## Output

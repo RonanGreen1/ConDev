@@ -1,32 +1,31 @@
-package main
+package twoThreads
 
 import (
-    "encoding/csv"          // Handles reading and writing CSV files, used for logging simulation data.
-    "image/color"           // Provides color definitions and manipulations, used for visualising the simulation grid.
-    "log"                   // For logging errors or other significant events during runtime.
-    "math/rand"             // Generates random numbers, used for fish and shark movement and population initialisation.
-    "os"                    // Handles file operations, such as opening, writing, or appending data to CSV files.
-    "sort"                  // Offers utilities for sorting slices, used for ordering mutexes or other collections.
-    "sync"                  // Provides concurrency primitives like Mutex and WaitGroup for thread-safe operations.
-    "time"                  // Provides utilities for working with time, such as timers or calculating simulation duration.
-    "unsafe"                // Enables low-level operations, used for pointer-based sorting in mutexes.
-    "strconv"               // Converts strings to other types and vice versa, such as for CSV data formatting.
+    "encoding/csv"               // Package for reading and writing CSV files.
+    "image/color"                // Package for handling colors used in rendering.
+    "log"                        // Package for logging errors and information.
+    "math/rand"                  // Package for generating random numbers.
+    "os"                         // Package for interacting with the operating system (e.g., file handling).
+    "strconv"                    // Package for converting data types to and from strings.
+    "sync"                       // Package for handling synchronization (e.g., mutexes for safe concurrent access).
+    "time"                       // Package for handling time and duration.
 
-	"github.com/hajimehoshi/ebiten/v2"            // A game library for building 2D games in Go.
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil" // Utility functions for Ebiten, such as drawing rectangles or displaying text.
+    "github.com/hajimehoshi/ebiten/v2"             // Ebiten package for creating 2D games.
+    "github.com/hajimehoshi/ebiten/v2/ebitenutil"  // Utility functions for Ebiten, such as drawing shapes and debugging.
 )
 
-// Constants for grid and window dimensions
+// Constants for grid and window dimensions.
 const (
-    xdim        = 50                 // Number of cells in the x direction
-    ydim        = 50                 // Number of cells in the y direction
-    windowXSize = 800                // Width of the window in pixels
-    windowYSize = 800                // Height of the window in pixels
-    cellXSize   = windowXSize / xdim // Width of each cell in pixels
-    cellYSize   = windowYSize / ydim // Height of each cell in pixels
+    xdim        = 50                 // Number of cells in the x direction (grid width).
+    ydim        = 50                 // Number of cells in the y direction (grid height).
+    windowXSize = 800                 // Width of the game window in pixels.
+    windowYSize = 800                 // Height of the game window in pixels.
+    cellXSize   = windowXSize / xdim  // Width of each cell in pixels, calculated based on the grid and window size.
+    cellYSize   = windowYSize / ydim  // Height of each cell in pixels, calculated similarly.
 )
 
-// Game struct representing the state of the game
+// Game struct representing the state of the game.
+// Contains the grid, entities (fish and sharks), simulation metadata, and synchronization primitives.
 type Game struct {
     grid        [xdim][ydim]Entity  // 2D array representing the game grid; each cell holds an Entity (fish, shark, or nil).
     fish        []*Fish             // List of all fish in the simulation.
@@ -39,18 +38,13 @@ type Game struct {
     sharkMutex  sync.Mutex          // Mutex for safely modifying the shark list.
 }
 
-// Partition struct representing a section of the grid
+// Partition struct representing a section of the grid.
+// Used to divide the grid for concurrent processing.
 type Partition struct {
-    startX int
-    endX   int
-    startY int
-    endY   int
-
-    // Boundary mutexes for synchronization
-    leftBoundaryMutex   *sync.Mutex
-    rightBoundaryMutex  *sync.Mutex
-    topBoundaryMutex    *sync.Mutex
-    bottomBoundaryMutex *sync.Mutex
+    startX             int          // Starting x-coordinate of the partition.
+    endX               int          // Ending x-coordinate of the partition.
+    leftBoundaryMutex  *sync.Mutex  // Mutex for controlling access to the left boundary of the partition.
+    rightBoundaryMutex *sync.Mutex  // Mutex for controlling access to the right boundary of the partition.
 }
 
 // Entity defines a common interface for all entities in the game (e.g., fish, shark).
@@ -149,9 +143,9 @@ func (g *Game) Update() error {
     // Check if the simulation duration has exceeded 10 seconds.
     if time.Since(g.startTime) > 10*time.Second {
         g.simComplete = true // Mark the simulation as complete.
-        //avgFPS := g.CalculateAverageFPS() // Calculate the average FPS.
+        avgFPS := g.CalculateAverageFPS() // Calculate the average FPS.
         // Save the simulation results to a CSV file.
-        //writeSimulationDataToCSV("simulation_results_2_threads.csv", g, len(g.partitions), avgFPS)
+        writeSimulationDataToCSV("simulation_results_2_threads.csv", g, len(g.partitions), avgFPS)
         return nil // Exit the update function as the simulation is complete.
     }
 
@@ -228,7 +222,7 @@ func (g *Game) processRemovalsAndAdditions(
     for _, sr := range allSharkRemovals {
         sharkRemovals = append(sharkRemovals, sr...) // Append each partition's removals to the main slice.
     }
-    
+
     // Remove fish marked for removal.
     fishToRemove := make(map[*Fish]bool) // Create a map to mark fish for removal.
     for _, fish := range fishRemovals {
@@ -283,62 +277,62 @@ func (g *Game) processRemovalsAndAdditions(
 //    - Breed a new fish if the breed timer threshold is reached.
 // 3. Ensures thread safety when crossing partition boundaries by locking and unlocking boundary mutexes.
 func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark) {
-    // Local slices for additions and removals of fish and sharks.
+    // Local slices for tracking additions and removals of fish and sharks in this partition.
     var localFishAdditions []*Fish
     var localFishRemovals []*Fish
     var localSharkAdditions []*Shark
     var localSharkRemovals []*Shark
 
-    // Create a copy of g.fish to avoid concurrent read issues.
-    g.fishMutex.Lock()
-    fishCopy := make([]*Fish, len(g.fish))
-    copy(fishCopy, g.fish)
-    g.fishMutex.Unlock()
+    // Create a copy of the fish list to avoid concurrent read issues.
+    g.fishMutex.Lock()                     // Lock the fish mutex to safely access the shared list.
+    fishCopy := make([]*Fish, len(g.fish)) // Create a slice for the fish copy.
+    copy(fishCopy, g.fish)                 // Copy the shared fish slice into the local slice.
+    g.fishMutex.Unlock()                   // Unlock the fish mutex.
 
-    // Create a copy of g.shark to avoid concurrent read issues.
-    g.sharkMutex.Lock()
-    sharkCopy := make([]*Shark, len(g.shark))
-    copy(sharkCopy, g.shark)
-    g.sharkMutex.Unlock()
+    // Create a copy of the shark list to avoid concurrent read issues.
+    g.sharkMutex.Lock()                      // Lock the shark mutex to safely access the shared list.
+    sharkCopy := make([]*Shark, len(g.shark)) // Create a slice for the shark copy.
+    copy(sharkCopy, g.shark)                 // Copy the shared shark slice into the local slice.
+    g.sharkMutex.Unlock()                    // Unlock the shark mutex.
 
-    // Process each fish in the copied fish slice.
+    // Process each fish in the copied list.
     for _, fish := range fishCopy {
         x, y := fish.GetPosition() // Get the current position of the fish.
 
-        // Check if the fish is within this partition.
-        if x < p.startX || x > p.endX || y < p.startY || y > p.endY {
-            continue // Skip fish not in this partition.
+        // Skip fish that are outside the partition boundaries.
+        if x < p.startX || x > p.endX {
+            continue
         }
 
         moved := false // Flag to track if the fish has moved.
 
-        // Try moving the fish in up to four random directions.
+        // Attempt to move the fish in up to four random directions.
         for dir := 0; dir < 4; dir++ {
-            direction := rand.Intn(4) // Randomly select a direction (0-3).
+            direction := rand.Intn(4) // Randomly select a direction (0 = north, 1 = south, etc.).
 
-            newX, newY := x, y // Initialize the new position variables.
+            newX, newY := x, y // Initialize new position variables.
 
             // Determine the new position based on the direction.
             switch direction {
-            case 0: // North.
+            case 0: // Move north.
                 if y > 0 {
                     newY = y - 1
                 } else {
                     newY = ydim - 1 // Wrap around to the bottom.
                 }
-            case 1: // South.
+            case 1: // Move south.
                 if y < ydim-1 {
                     newY = y + 1
                 } else {
                     newY = 0 // Wrap around to the top.
                 }
-            case 2: // East.
+            case 2: // Move east.
                 if x < xdim-1 {
                     newX = x + 1
                 } else {
                     newX = 0 // Wrap around to the left.
                 }
-            case 3: // West.
+            case 3: // Move west.
                 if x > 0 {
                     newX = x - 1
                 } else {
@@ -346,64 +340,46 @@ func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark) 
                 }
             }
 
-            // Determine if the movement crosses boundaries.
-            var boundaryMutexes []*sync.Mutex
+            // Variable to hold the mutex if crossing a boundary.
+            var mu *sync.Mutex
 
-            if (x == p.startX && newX < x) || (x == p.endX && newX > x) {
-                // Crosses a vertical boundary.
-                if newX < x && p.leftBoundaryMutex != nil {
-                    boundaryMutexes = append(boundaryMutexes, p.leftBoundaryMutex)
-                }
-                if newX > x && p.rightBoundaryMutex != nil {
-                    boundaryMutexes = append(boundaryMutexes, p.rightBoundaryMutex)
-                }
-            }
-
-            if (y == p.startY && newY < y) || (y == p.endY && newY > y) {
-                // Crosses a horizontal boundary.
-                if newY < y && p.topBoundaryMutex != nil {
-                    boundaryMutexes = append(boundaryMutexes, p.topBoundaryMutex)
-                }
-                if newY > y && p.bottomBoundaryMutex != nil {
-                    boundaryMutexes = append(boundaryMutexes, p.bottomBoundaryMutex)
-                }
-            }
-
-            // Sort and lock boundary mutexes to ensure consistent locking order.
-            sort.Slice(boundaryMutexes, func(i, j int) bool {
-                return uintptr(unsafe.Pointer(boundaryMutexes[i])) < uintptr(unsafe.Pointer(boundaryMutexes[j]))
-            })
-            for _, mu := range boundaryMutexes {
-                mu.Lock()
+            // Check if the new position crosses a partition boundary.
+            if newX < p.startX {
+                mu = p.leftBoundaryMutex // Use the left boundary mutex.
+                mu.Lock()                // Lock the left boundary mutex.
+            } else if newX > p.endX {
+                mu = p.rightBoundaryMutex // Use the right boundary mutex.
+                mu.Lock()                 // Lock the right boundary mutex.
             }
 
             // Check if the new cell is empty.
             if g.grid[newX][newY] == nil {
-                // Move the fish to the new position.
-                g.grid[x][y] = nil           // Clear the current cell.
-                fish.SetPosition(newX, newY) // Update fish's position.
-                g.grid[newX][newY] = fish    // Place fish in the new cell.
+                g.grid[x][y] = nil           // Clear the fish's current cell.
+                fish.SetPosition(newX, newY) // Update the fish's position.
+                g.grid[newX][newY] = fish    // Place the fish in the new cell.
 
-                // Increment the fish's breed timer.
-                fish.breedTimer++
+                fish.breedTimer++ // Increment the fish's breed timer.
+
+                // Check if the fish is ready to breed.
                 if fish.breedTimer == 5 {
-                    // Fish is ready to breed.
-                    fish.breedTimer = 0
+                    fish.breedTimer = 0 // Reset the breed timer.
                     // Create a new fish at the old position.
                     newFish := &Fish{x: x, y: y, breedTimer: 0}
-                    g.grid[x][y] = newFish                    // Place the new fish in the old cell.
-                    localFishAdditions = append(localFishAdditions, newFish) // Add to local additions.
+                    g.grid[x][y] = newFish                     // Place the new fish in the old cell.
+                    localFishAdditions = append(localFishAdditions, newFish) // Add the new fish to local additions.
                 }
+
                 moved = true // Mark that the fish has moved.
             }
 
-            // Unlock boundary mutexes in reverse order.
-            for i := len(boundaryMutexes) - 1; i >= 0; i-- {
-                boundaryMutexes[i].Unlock()
+            // Unlock the boundary mutex if it was used.
+            if mu != nil {
+                mu.Unlock()
             }
 
+            // Exit the loop if the fish has successfully moved.
             if moved {
-                break // Exit the direction loop if the fish has moved.
+                break
             }
         }
     }
@@ -411,40 +387,40 @@ func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark) 
     for _, shark := range sharkCopy {
         x, y := shark.GetPosition() // Get the current position of the shark.
     
-        // Check if the shark is within this partition.
-        if x < p.startX || x > p.endX || y < p.startY || y > p.endY {
-            continue // Skip sharks not in this partition.
+        // Skip sharks that are outside the partition boundaries.
+        if x < p.startX || x > p.endX {
+            continue
         }
     
         moved := false // Flag to track if the shark has moved.
     
-        // Try to move to a position occupied by a fish first.
+        // Attempt to move the shark up to four times in a random direction.
         for dir := 0; dir < 4; dir++ {
-            direction := rand.Intn(4) // Randomly select a direction (0-3).
+            direction := rand.Intn(4) // Randomly select a direction (0 = north, 1 = south, etc.).
     
-            newX, newY := x, y // Initialize the new position variables.
+            newX, newY := x, y // Initialize new position variables.
     
             // Determine the new position based on the direction.
             switch direction {
-            case 0: // North.
+            case 0: // Move north.
                 if y > 0 {
                     newY = y - 1
                 } else {
                     newY = ydim - 1 // Wrap around to the bottom.
                 }
-            case 1: // South.
+            case 1: // Move south.
                 if y < ydim-1 {
                     newY = y + 1
                 } else {
                     newY = 0 // Wrap around to the top.
                 }
-            case 2: // East.
+            case 2: // Move east.
                 if x < xdim-1 {
                     newX = x + 1
                 } else {
                     newX = 0 // Wrap around to the left.
                 }
-            case 3: // West.
+            case 3: // Move west.
                 if x > 0 {
                     newX = x - 1
                 } else {
@@ -452,88 +428,68 @@ func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark) 
                 }
             }
     
-            // Determine if the movement crosses boundaries.
-            var boundaryMutexes []*sync.Mutex
+            // Variable to hold the boundary mutex if crossing a boundary.
+            var mu *sync.Mutex
     
-            if (x == p.startX && newX < x) || (x == p.endX && newX > x) {
-                // Crossing vertical boundary.
-                if newX < x && p.leftBoundaryMutex != nil {
-                    boundaryMutexes = append(boundaryMutexes, p.leftBoundaryMutex)
-                }
-                if newX > x && p.rightBoundaryMutex != nil {
-                    boundaryMutexes = append(boundaryMutexes, p.rightBoundaryMutex)
-                }
-            }
-    
-            if (y == p.startY && newY < y) || (y == p.endY && newY > y) {
-                // Crossing horizontal boundary.
-                if newY < y && p.topBoundaryMutex != nil {
-                    boundaryMutexes = append(boundaryMutexes, p.topBoundaryMutex)
-                }
-                if newY > y && p.bottomBoundaryMutex != nil {
-                    boundaryMutexes = append(boundaryMutexes, p.bottomBoundaryMutex)
-                }
-            }
-    
-            // Sort and lock boundary mutexes to ensure consistent locking order.
-            sort.Slice(boundaryMutexes, func(i, j int) bool {
-                return uintptr(unsafe.Pointer(boundaryMutexes[i])) < uintptr(unsafe.Pointer(boundaryMutexes[j]))
-            })
-            for _, mu := range boundaryMutexes {
-                mu.Lock()
+            // Check if the new position crosses a partition boundary.
+            if newX < p.startX {
+                mu = p.leftBoundaryMutex // Use the left boundary mutex.
+                mu.Lock()                // Lock the left boundary mutex.
+            } else if newX > p.endX {
+                mu = p.rightBoundaryMutex // Use the right boundary mutex.
+                mu.Lock()                 // Lock the right boundary mutex.
             }
     
             // Check if the new cell is occupied by a fish.
             if g.grid[newX][newY] != nil && g.grid[newX][newY].GetType() == "fish" {
-                // Move the shark to the new position.
-                g.grid[x][y] = nil            // Clear the current cell.
-                shark.SetPosition(newX, newY) // Update shark's position.
-                g.grid[newX][newY] = shark    // Place shark in the new cell.
+                g.grid[x][y] = nil            // Clear the shark's current cell.
+                shark.SetPosition(newX, newY) // Update the shark's position.
+                g.grid[newX][newY] = shark    // Place the shark in the new cell.
     
                 shark.starve = 0 // Reset the shark's starvation counter.
     
                 // Increment the shark's breed timer.
                 shark.breedTimer++
                 if shark.breedTimer == 5 {
-                    // Shark is ready to breed.
-                    shark.breedTimer = 0
+                    shark.breedTimer = 0 // Reset the breed timer.
                     // Create a new shark at the old position.
                     newShark := &Shark{x: x, y: y, breedTimer: 0, starve: 0}
-                    g.grid[x][y] = newShark                      // Place the new shark in the old cell.
-                    localSharkAdditions = append(localSharkAdditions, newShark) // Add to local additions.
+                    g.grid[x][y] = newShark                       // Place the new shark in the old cell.
+                    localSharkAdditions = append(localSharkAdditions, newShark) // Add the new shark to local additions.
                 }
     
                 // Mark the fish for removal from the fish slice.
                 var fishToRemove *Fish
                 for _, fish := range fishCopy {
-                    fx, fy := fish.GetPosition()
+                    fx, fy := fish.GetPosition() // Get the fish's position.
                     if fx == newX && fy == newY {
-                        fishToRemove = fish
+                        fishToRemove = fish // Identify the fish to remove.
                         break
                     }
                 }
                 if fishToRemove != nil {
-                    localFishRemovals = append(localFishRemovals, fishToRemove)
+                    localFishRemovals = append(localFishRemovals, fishToRemove) // Add the fish to local removals.
                 }
     
                 moved = true // Mark that the shark has moved.
             }
     
-            // Unlock boundary mutexes in reverse order.
-            for i := len(boundaryMutexes) - 1; i >= 0; i-- {
-                boundaryMutexes[i].Unlock()
+            // Unlock the boundary mutex if it was used.
+            if mu != nil {
+                mu.Unlock()
             }
     
+            // Exit the loop if the shark has successfully moved.
             if moved {
-                break // Exit the direction loop if the shark has moved.
+                break
             }
         }
 
-            if !moved { // Check if the shark hasn't moved yet.
+        if !moved { // If the shark didn't move by eating a fish.
             for dir := 0; dir < 4; dir++ {
-                direction := rand.Intn(4) // Randomly select a direction (0-3).
+                direction := rand.Intn(4) // Randomly select a direction (0 = north, 1 = south, etc.).
         
-                newX, newY := x, y // Initialize the new position variables.
+                newX, newY := x, y // Initialize new position variables.
         
                 // Determine the new position based on the direction.
                 switch direction {
@@ -563,69 +519,53 @@ func (g *Game) RunPartition(p Partition) ([]*Fish, []*Fish, []*Shark, []*Shark) 
                     }
                 }
         
-                // Determine if crossing boundaries and identify relevant mutexes.
-                var boundaryMutexes []*sync.Mutex
+                // Variable to hold the boundary mutex if crossing a boundary.
+                var mu *sync.Mutex
         
-                if (x == p.startX && newX < x) || (x == p.endX && newX > x) {
-                    // Crossing vertical boundary.
-                    if newX < x && p.leftBoundaryMutex != nil {
-                        boundaryMutexes = append(boundaryMutexes, p.leftBoundaryMutex)
-                    }
-                    if newX > x && p.rightBoundaryMutex != nil {
-                        boundaryMutexes = append(boundaryMutexes, p.rightBoundaryMutex)
-                    }
-                }
-        
-                if (y == p.startY && newY < y) || (y == p.endY && newY > y) {
-                    // Crossing horizontal boundary.
-                    if newY < y && p.topBoundaryMutex != nil {
-                        boundaryMutexes = append(boundaryMutexes, p.topBoundaryMutex)
-                    }
-                    if newY > y && p.bottomBoundaryMutex != nil {
-                        boundaryMutexes = append(boundaryMutexes, p.bottomBoundaryMutex)
-                    }
-                }
-        
-                // Sort and lock boundary mutexes to ensure consistent locking order.
-                sort.Slice(boundaryMutexes, func(i, j int) bool {
-                    return uintptr(unsafe.Pointer(boundaryMutexes[i])) < uintptr(unsafe.Pointer(boundaryMutexes[j]))
-                })
-                for _, mu := range boundaryMutexes {
-                    mu.Lock()
+                // Check if the new position crosses a partition boundary.
+                if newX < p.startX {
+                    mu = p.leftBoundaryMutex // Use the left boundary mutex.
+                    mu.Lock()                // Lock the left boundary mutex.
+                } else if newX > p.endX {
+                    mu = p.rightBoundaryMutex // Use the right boundary mutex.
+                    mu.Lock()                 // Lock the right boundary mutex.
                 }
         
                 // Check if the new cell is empty.
                 if g.grid[newX][newY] == nil {
-                    // Move the shark to the new position.
                     g.grid[x][y] = nil            // Clear the current cell.
-                    shark.SetPosition(newX, newY) // Update shark's position.
-                    g.grid[newX][newY] = shark    // Place shark in the new cell.
+                    shark.SetPosition(newX, newY) // Update the shark's position.
+                    g.grid[newX][newY] = shark    // Place the shark in the new cell.
         
                     shark.starve++ // Increment the shark's starvation counter.
-                    if shark.starve == 5 { // Check if the shark dies of starvation.
-                        g.grid[newX][newY] = nil                      // Remove shark from the grid.
-                        localSharkRemovals = append(localSharkRemovals, shark) // Mark for removal.
+        
+                    // Check if the shark has died of starvation.
+                    if shark.starve == 5 {
+                        g.grid[newX][newY] = nil                     // Remove the shark from the grid.
+                        localSharkRemovals = append(localSharkRemovals, shark) // Mark the shark for removal.
                     } else {
-                        // Increment the shark's breed timer.
+                        // Increment the shark's breeding timer.
                         shark.breedTimer++
-                        if shark.breedTimer == 6 { // Check if the shark is ready to breed.
-                            shark.breedTimer = 0
+                        if shark.breedTimer == 6 {
+                            shark.breedTimer = 0 // Reset the breeding timer.
                             // Create a new shark at the old position.
                             newShark := &Shark{x: x, y: y, breedTimer: 0, starve: 0}
-                            g.grid[x][y] = newShark                      // Place the new shark in the old cell.
-                            localSharkAdditions = append(localSharkAdditions, newShark) // Add to local additions.
+                            g.grid[x][y] = newShark                       // Place the new shark in the old cell.
+                            localSharkAdditions = append(localSharkAdditions, newShark) // Add the new shark to local additions.
                         }
                     }
+        
                     moved = true // Mark that the shark has moved.
                 }
         
-                // Unlock boundary mutexes in reverse order to prevent deadlocks.
-                for i := len(boundaryMutexes) - 1; i >= 0; i-- {
-                    boundaryMutexes[i].Unlock()
+                // Unlock the boundary mutex if it was used.
+                if mu != nil {
+                    mu.Unlock()
                 }
         
+                // Exit the loop if the shark has successfully moved.
                 if moved {
-                    break // Exit the direction loop if the shark has moved.
+                    break
                 }
             }
         }
@@ -699,7 +639,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return windowXSize, windowYSize
 }
 
-// NewGame initializes a new game instance with a grid of cells divided into four quadrants for multi-threading.
+// NewGame initializes a new game instance with a grid of cells and partitioning for multi-threading.
 //
 // Input:
 //   - None.
@@ -709,74 +649,41 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 //
 // Functionality:
 // 1. Creates a game instance and sets the start time.
-// 2. Divides the grid into four quadrants (top-left, top-right, bottom-left, bottom-right).
-//    - Each quadrant has mutexes for managing boundary synchronization between threads.
+// 2. Divides the grid into two partitions for two threads.
+//    - Each partition has boundary mutexes for thread-safe updates at edges.
 // 3. Initializes the grid with random entities (fish, sharks, or empty spaces).
 //    - Fish and sharks are placed with specified probabilities.
-//    - Populates the fish and shark lists for efficient access.
+//    - Populates the fish and shark lists with their respective entities.
 func NewGame() *Game {
     // Initialize a new Game instance with the current start time.
     game := &Game{
         startTime: time.Now(),
     }
 
-    // Define the size of each quadrant along the x and y axes.
-    partitionXSize := xdim / 2 // Half the grid width for x-axis division.
-    partitionYSize := ydim / 2 // Half the grid height for y-axis division.
+    // Divide the grid into two partitions for multi-threading.
+    partitionSize := xdim / 2 // Half the grid width for two threads.
 
     // Create mutexes for managing boundary synchronization.
-    verticalBoundaryMutex := &sync.Mutex{}   // Mutex for vertical boundaries (between left and right quadrants).
-    horizontalBoundaryMutex := &sync.Mutex{} // Mutex for horizontal boundaries (between top and bottom quadrants).
+    borderBoundaryMutex := &sync.Mutex{}  // Mutex for the left boundary.
+    middleBoundaryMutex := &sync.Mutex{} // Mutex for the right boundary.
 
-    // Define partitions for the four quadrants.
+    // Define partitions for the grid, ensuring mutexes are shared appropriately.
     game.partitions = []Partition{
-        // Top-left quadrant.
         {
-            startX:              0,                        // Start of the x range.
-            endX:                partitionXSize - 1,       // End of the x range.
-            startY:              0,                        // Start of the y range.
-            endY:                partitionYSize - 1,       // End of the y range.
-            leftBoundaryMutex:   nil,                      // No left boundary (outer edge).
-            rightBoundaryMutex:  verticalBoundaryMutex,    // Mutex for right boundary.
-            topBoundaryMutex:    nil,                      // No top boundary (outer edge).
-            bottomBoundaryMutex: horizontalBoundaryMutex,  // Mutex for bottom boundary.
+            startX:             0,                    // Start of the first partition.
+            endX:               partitionSize - 1,    // End of the first partition.
+            leftBoundaryMutex:  borderBoundaryMutex,    // Mutex for the left boundary.
+            rightBoundaryMutex: middleBoundaryMutex,   // Mutex for the right boundary.
         },
-        // Top-right quadrant.
         {
-            startX:              partitionXSize,           // Start of the x range.
-            endX:                xdim - 1,                 // End of the x range.
-            startY:              0,                        // Start of the y range.
-            endY:                partitionYSize - 1,       // End of the y range.
-            leftBoundaryMutex:   verticalBoundaryMutex,    // Mutex for left boundary.
-            rightBoundaryMutex:  nil,                      // No right boundary (outer edge).
-            topBoundaryMutex:    nil,                      // No top boundary (outer edge).
-            bottomBoundaryMutex: horizontalBoundaryMutex,  // Mutex for bottom boundary.
-        },
-        // Bottom-left quadrant.
-        {
-            startX:              0,                        // Start of the x range.
-            endX:                partitionXSize - 1,       // End of the x range.
-            startY:              partitionYSize,           // Start of the y range.
-            endY:                ydim - 1,                 // End of the y range.
-            leftBoundaryMutex:   nil,                      // No left boundary (outer edge).
-            rightBoundaryMutex:  verticalBoundaryMutex,    // Mutex for right boundary.
-            topBoundaryMutex:    horizontalBoundaryMutex,  // Mutex for top boundary.
-            bottomBoundaryMutex: nil,                      // No bottom boundary (outer edge).
-        },
-        // Bottom-right quadrant.
-        {
-            startX:              partitionXSize,           // Start of the x range.
-            endX:                xdim - 1,                 // End of the x range.
-            startY:              partitionYSize,           // Start of the y range.
-            endY:                ydim - 1,                 // End of the y range.
-            leftBoundaryMutex:   verticalBoundaryMutex,    // Mutex for left boundary.
-            rightBoundaryMutex:  nil,                      // No right boundary (outer edge).
-            topBoundaryMutex:    horizontalBoundaryMutex,  // Mutex for top boundary.
-            bottomBoundaryMutex: nil,                      // No bottom boundary (outer edge).
+            startX:             partitionSize,        // Start of the second partition.
+            endX:               xdim - 1,             // End of the second partition.
+            leftBoundaryMutex:  middleBoundaryMutex,   // Mutex for the shared boundary.
+            rightBoundaryMutex: borderBoundaryMutex,    // Mutex for the other shared boundary.
         },
     }
 
-    // Populate the grid with random entities (fish, sharks, or empty spaces).
+    // Populate the grid with random entities.
     for i := 0; i < xdim; i++ {        // Iterate over the x-dimension.
         for k := 0; k < ydim; k++ {    // Iterate over the y-dimension.
             randomNum := rand.Intn(100) + 1 // Generate a random number between 1 and 100.

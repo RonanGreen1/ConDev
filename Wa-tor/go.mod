@@ -1,4 +1,4 @@
-module Wa-tor
+module Wator
 
 go 1.23.1
 

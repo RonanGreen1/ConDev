@@ -1,4 +1,4 @@
-module 8Thread
+module fourThread
 
 go 1.23.1
 
